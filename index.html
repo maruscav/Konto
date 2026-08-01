@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ledger — Finance Tracker</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ===================== Auth screen ===================== -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <p class="brand">Ledger</p>
+    <p class="brand-sub">Personal Finance</p>
+    <input type="email" id="auth-email" placeholder="you@email.com" autocomplete="email"/>
+    <button id="send-link-btn">Send sign-in link</button>
+    <p class="auth-msg" id="auth-msg"></p>
+  </div>
+</div>
+
+<!-- ===================== App shell ===================== -->
+<div id="app-shell" style="display:none;">
+
+  <nav class="sidebar">
+    <p class="brand">Ledger</p>
+    <p class="brand-sub">Personal Finance</p>
+
+    <div class="nav-item active" data-view="view-summary"><span class="tick">01</span> Summary</div>
+    <div class="nav-item" data-view="view-portfolio"><span class="tick">02</span> Portfolio</div>
+    <div class="nav-item" data-view="view-spending"><span class="tick">03</span> Spending</div>
+    <div class="nav-item" data-view="view-settings"><span class="tick">04</span> Settings</div>
+
+    <div class="sidebar-footer">
+      <div>Curs EUR (RON): <span class="mono" id="rate-input-display"></span></div>
+      <button id="sign-out-btn">Sign out</button>
+    </div>
+  </nav>
+
+  <main>
+
+    <!-- ---------- Summary view ---------- -->
+    <section id="view-summary" class="view active">
+      <div class="view-header">
+        <h1>Summary — <span class="year-label"></span></h1>
+        <p>Income, expenses and monthly profit / loss.</p>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat-card"><div class="stat-label">Total income</div><div class="stat-value mono" id="stat-income">0.00</div></div>
+        <div class="stat-card"><div class="stat-label">Total expenses</div><div class="stat-value mono" id="stat-expenses">0.00</div></div>
+        <div class="stat-card"><div class="stat-label">Overall P/L</div><div class="stat-value mono" id="stat-pl">0.00</div></div>
+      </div>
+
+      <div class="card">
+        <p class="card-title">
+          <span>Monthly income / expenses</span>
+          <span>
+            <button class="icon-btn" id="year-prev" title="Previous year">‹</button>
+            <span class="mono year-label"></span>
+            <button class="icon-btn" id="year-next" title="Next year">›</button>
+          </span>
+        </p>
+        <table class="ledger">
+          <thead><tr><th>Month</th><th>Income</th><th>Expenses</th><th>P / L</th></tr></thead>
+          <tbody id="summary-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ---------- Portfolio view ---------- -->
+    <section id="view-portfolio" class="view">
+      <div class="view-header">
+        <h1>Portfolio</h1>
+        <p>Brokers and cash, converted to EUR using your saved rate.</p>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat-card"><div class="stat-label">Total value (EUR)</div><div class="stat-value mono" id="grand-total-eur">0.00</div></div>
+        <div class="stat-card"><div class="stat-label">Total value (RON)</div><div class="stat-value mono" id="grand-total-ron">0.00</div></div>
+        <div class="stat-card"><div class="stat-label">Cash (EUR)</div><div class="stat-value mono" id="cash-total-eur">0.00</div></div>
+      </div>
+
+      <div class="card">
+        <p class="card-title">Brokers</p>
+        <table class="ledger">
+          <thead><tr>
+            <th>Broker</th><th>Ccy</th><th>Investitie</th><th>Valoare port</th>
+            <th>Eval (EUR)</th><th>Randament %</th><th>P/L</th><th>P/L (EUR)</th><th></th>
+          </tr></thead>
+          <tbody id="brokers-tbody"></tbody>
+        </table>
+        <button class="add-row-btn" id="add-broker-btn">+ Add broker</button>
+      </div>
+
+      <div class="card">
+        <p class="card-title">Cash & bank accounts</p>
+        <table class="ledger">
+          <thead><tr><th>Account</th><th>Ccy</th><th>Amount</th><th>Eval (EUR)</th><th></th></tr></thead>
+          <tbody id="cash-tbody"></tbody>
+        </table>
+        <button class="add-row-btn" id="add-cash-btn">+ Add account</button>
+      </div>
+    </section>
+
+    <!-- ---------- Spending view ---------- -->
+    <section id="view-spending" class="view">
+      <div class="view-header">
+        <h1>Spending tracker — <span class="year-label"></span></h1>
+        <p>Discretionary spending by category, feeds the Expenses column in Summary.</p>
+      </div>
+
+      <div class="card" style="overflow-x:auto;">
+        <p class="card-title">Categories</p>
+        <table class="ledger">
+          <thead><tr id="spending-thead-row"></tr></thead>
+          <tbody id="spending-tbody"></tbody>
+        </table>
+        <button class="add-row-btn" id="add-category-btn">+ Add category</button>
+      </div>
+    </section>
+
+    <!-- ---------- Settings view ---------- -->
+    <section id="view-settings" class="view">
+      <div class="view-header">
+        <h1>Settings</h1>
+        <p>Manual exchange rate used across Portfolio and totals.</p>
+      </div>
+
+      <div class="card" style="max-width:420px;">
+        <p class="card-title">Exchange rate</p>
+        <div class="field-row">
+          <label>Curs EUR (RON per 1 EUR)</label>
+          <input type="number" step="0.0001" id="rate-input-settings"/>
+        </div>
+        <button class="save-btn" id="save-rate-btn">Save rate</button>
+        <span class="save-hint" id="rate-save-hint"></span>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<input type="hidden" id="rate-input"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-config.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
