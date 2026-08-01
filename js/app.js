@@ -15,7 +15,7 @@ let state = {
   netWorth: []        // [{ snapshot_date, total_eur }, ...] ordered by date
 };
 
-let charts = { incomeExpense: null, netWorth: null, categoryBreakdown: null };
+let charts = { incomeExpense: null, netWorth: null, categoryBreakdown: null, heroSparkline: null };
 let lastSnapshotValue = null;
 let openPopover = null;
 
@@ -52,7 +52,7 @@ async function initAuth() {
 // ---------------- Data load ----------------
 
 async function loadAll() {
-  await Promise.all([loadSettings(), loadBrokers(), loadCash(), loadIncome(), loadCategoriesAndSpending(), loadNetWorthSnapshots()]);
+  await Promise.all([loadSettings(), loadBrokers(), loadCash(), loadIncome(), loadCategoriesAndSpending(), loadNetWorthSnapshots(), loadDashboardData()]);
   renderAll();
 }
 
@@ -98,6 +98,48 @@ async function loadNetWorthSnapshots() {
   state.netWorth = data || [];
 }
 
+async function loadDashboardData() {
+  const now = new Date();
+  const curYear = now.getFullYear(), curMonth = now.getMonth() + 1;
+  let prevYear = curYear, prevMonth = curMonth - 1;
+  if (prevMonth === 0) { prevMonth = 12; prevYear -= 1; }
+  const years = curYear === prevYear ? [curYear] : [curYear, prevYear];
+
+  const { data: incomeRows } = await sb.from('monthly_income').select('*').eq('user_id', uid()).in('year', years);
+  const { data: catRows } = await sb.from('spending_categories').select('*').eq('user_id', uid());
+  const { data: entryRows } = await sb.from('spending_entries').select('*').eq('user_id', uid()).in('year', years);
+
+  const curIncome = (incomeRows || []).find(r => r.year === curYear && r.month === curMonth)?.income || 0;
+  const prevIncome = (incomeRows || []).find(r => r.year === prevYear && r.month === prevMonth)?.income || 0;
+
+  const curByCat = {}, prevByCat = {};
+  (catRows || []).forEach(c => { curByCat[c.id] = 0; prevByCat[c.id] = 0; });
+  (entryRows || []).forEach(e => {
+    if (e.year === curYear && e.month === curMonth) curByCat[e.category_id] = (curByCat[e.category_id] || 0) + Number(e.amount);
+    if (e.year === prevYear && e.month === prevMonth) prevByCat[e.category_id] = (prevByCat[e.category_id] || 0) + Number(e.amount);
+  });
+  const curExpenses = Object.values(curByCat).reduce((a, b) => a + b, 0);
+
+  const [{ data: recentSpend }, { data: recentCash }, { data: recentBrokers }, { data: recentIncome }] = await Promise.all([
+    sb.from('spending_entries').select('*, spending_categories(name)').eq('user_id', uid()).order('updated_at', { ascending: false }).limit(6),
+    sb.from('cash_accounts').select('*').eq('user_id', uid()).order('updated_at', { ascending: false }).limit(6),
+    sb.from('brokers').select('*').eq('user_id', uid()).order('updated_at', { ascending: false }).limit(6),
+    sb.from('monthly_income').select('*').eq('user_id', uid()).order('updated_at', { ascending: false }).limit(6)
+  ]);
+
+  const activity = [];
+  (recentSpend || []).forEach(e => {
+    if (Number(e.amount) === 0 && !e.note) return;
+    activity.push({ icon: '💳', title: `${e.spending_categories?.name || 'Spending'} — ${MONTHS[e.month - 1]} ${e.year}`, time: e.updated_at, amount: Number(e.amount) });
+  });
+  (recentCash || []).forEach(c => activity.push({ icon: '🏦', title: `${c.name} updated`, time: c.updated_at, amount: Number(c.amount) }));
+  (recentBrokers || []).forEach(b => activity.push({ icon: '📈', title: `${b.name} updated`, time: b.updated_at, amount: Number(b.valoare_port) }));
+  (recentIncome || []).forEach(i => activity.push({ icon: '💰', title: `Income — ${MONTHS[i.month - 1]} ${i.year}`, time: i.updated_at, amount: Number(i.income) }));
+  activity.sort((a, b) => new Date(b.time) - new Date(a.time));
+
+  state.dashboard = { curYear, curMonth, prevYear, prevMonth, curIncome, prevIncome, curByCat, prevByCat, curExpenses, categories: catRows || [], activity: activity.slice(0, 8) };
+}
+
 // ---------------- Derived values ----------------
 
 function toEUR(amount, currency) {
@@ -121,6 +163,7 @@ function renderAll() {
   renderPortfolio();
   renderSpending();
   renderCharts();
+  renderDashboard();
 }
 
 function renderYearLabels() {
@@ -151,7 +194,7 @@ function renderSummary() {
     tr.querySelector('input').addEventListener('change', async (e) => {
       const val = parseFloat(e.target.value) || 0;
       state.income[m] = val;
-      await sb.from('monthly_income').upsert({ user_id: uid(), year: state.year, month: m, income: val }, { onConflict: 'user_id,year,month' });
+      await sb.from('monthly_income').upsert({ user_id: uid(), year: state.year, month: m, income: val, updated_at: new Date().toISOString() }, { onConflict: 'user_id,year,month' });
       renderSummary();
     });
     tbody.appendChild(tr);
@@ -248,7 +291,7 @@ function renderPortfolio() {
         let val = e.target.value;
         if (field === 'amount') val = parseFloat(val) || 0;
         c[field] = val;
-        await sb.from('cash_accounts').update({ [field]: val }).eq('id', c.id);
+        await sb.from('cash_accounts').update({ [field]: val, updated_at: new Date().toISOString() }).eq('id', c.id);
         renderPortfolio();
       });
     });
@@ -266,6 +309,7 @@ function renderPortfolio() {
   document.getElementById('grand-total-ron').textContent = fmt(grandVal * state.rate);
   document.getElementById('cash-total-eur').textContent = fmt(totalCashEUR);
   snapshotNetWorth(grandVal);
+  renderDashboard();
 }
 
 async function snapshotNetWorth(totalEUR) {
@@ -319,7 +363,7 @@ function renderSpending() {
         const val = parseFloat(e.target.value) || 0;
         if (!state.spending[cat.id]) state.spending[cat.id] = {};
         state.spending[cat.id][m] = val;
-        await sb.from('spending_entries').upsert({ user_id: uid(), category_id: cat.id, year: state.year, month: m, amount: val }, { onConflict: 'user_id,category_id,year,month' });
+        await sb.from('spending_entries').upsert({ user_id: uid(), category_id: cat.id, year: state.year, month: m, amount: val, updated_at: new Date().toISOString() }, { onConflict: 'user_id,category_id,year,month' });
         renderSpending();
         renderSummary();
       });
@@ -348,9 +392,122 @@ function renderSpending() {
   tbody.appendChild(totalRow);
 }
 
+// ---------------- Dashboard ----------------
+
+function renderDashboard() {
+  if (!state.dashboard) return;
+  const d = state.dashboard;
+
+  let totalValEUR = 0;
+  state.brokers.forEach(b => totalValEUR += toEUR(b.valoare_port, b.currency));
+  let totalCashEUR = 0;
+  state.cash.forEach(c => totalCashEUR += toEUR(c.amount, c.currency));
+  const netWorth = totalValEUR + totalCashEUR;
+
+  document.getElementById('hero-net-worth').textContent = fmt(netWorth);
+  document.getElementById('hero-net-worth-ron').textContent = fmt(netWorth * state.rate) + ' RON';
+
+  const pl = d.curIncome - d.curExpenses;
+  document.getElementById('dash-income').textContent = fmt(d.curIncome);
+  document.getElementById('dash-expenses').textContent = fmt(d.curExpenses);
+  const plEl = document.getElementById('dash-pl');
+  plEl.textContent = fmt(pl);
+  plEl.className = 'stat-value mono ' + (pl >= 0 ? 'pos' : 'neg');
+
+  document.getElementById('dash-month-label').textContent = `${MONTHS[d.curMonth - 1]} ${d.curYear}`;
+
+  const trendList = document.getElementById('trending-list');
+  const sorted = d.categories
+    .map(c => ({ id: c.id, name: c.name, cur: d.curByCat[c.id] || 0, prev: d.prevByCat[c.id] || 0 }))
+    .filter(c => c.cur > 0 || c.prev > 0)
+    .sort((a, b) => b.cur - a.cur)
+    .slice(0, 6);
+
+  if (!sorted.length) {
+    trendList.innerHTML = '<div class="empty-state">No spending logged yet this month.</div>';
+  } else {
+    trendList.innerHTML = sorted.map(c => {
+      const delta = c.prev > 0 ? ((c.cur - c.prev) / c.prev * 100) : (c.cur > 0 ? 100 : 0);
+      const dirClass = delta > 0.5 ? 'up' : (delta < -0.5 ? 'down' : '');
+      const arrow = delta > 0.5 ? '▲' : (delta < -0.5 ? '▼' : '—');
+      return `<div class="trend-row">
+        <div class="trend-left">
+          <span class="cat-dot" style="background:${colorForCategory(c.id)}"></span>
+          <span class="trend-name">${c.name}</span>
+        </div>
+        <div class="trend-right">
+          <div class="trend-amount">${fmt(c.cur)}</div>
+          <div class="trend-delta ${dirClass}">${arrow} ${Math.abs(delta).toFixed(0)}%</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  const activityList = document.getElementById('activity-list');
+  if (!d.activity.length) {
+    activityList.innerHTML = '<div class="empty-state">No activity yet — start entering your numbers.</div>';
+  } else {
+    activityList.innerHTML = d.activity.map(a => `
+      <div class="activity-row">
+        <div class="activity-main">
+          <div class="activity-icon">${a.icon}</div>
+          <div class="activity-text">
+            <div class="activity-title">${a.title}</div>
+            <div class="activity-time">${timeAgo(a.time)}</div>
+          </div>
+        </div>
+        <div class="trend-amount mono">${fmt(a.amount)}</div>
+      </div>`).join('');
+  }
+
+  renderHeroSparkline();
+}
+
+function timeAgo(iso) {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
+function renderHeroSparkline() {
+  const ctx = document.getElementById('chart-hero-sparkline');
+  if (!ctx) return;
+  const points = state.netWorth;
+  if (charts.heroSparkline) charts.heroSparkline.destroy();
+  if (!points.length) { charts.heroSparkline = null; return; }
+  charts.heroSparkline = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: points.map(p => p.snapshot_date),
+      datasets: [{
+        data: points.map(p => Number(p.total_eur)),
+        borderColor: '#ffffff', backgroundColor: 'rgba(255,255,255,0.2)',
+        fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      scales: { x: { display: false }, y: { display: false } }
+    }
+  });
+}
+
 // ---------------- Charts ----------------
 
-const CHART_COLORS = ['#c9a15a', '#4fb88a', '#8891a6', '#d46a6a', '#6a8fd4', '#a86ad4', '#d4a86a', '#6ad4c0'];
+const CHART_COLORS = ['#4f7cff', '#0f9d80', '#e6584f', '#f0a83c', '#9b6bf2', '#ec5fa3', '#2fb8c9', '#8a8f9c'];
+
+function colorForCategory(catId) {
+  let hash = 0;
+  for (let i = 0; i < catId.length; i++) hash = (hash * 31 + catId.charCodeAt(i)) >>> 0;
+  return CHART_COLORS[hash % CHART_COLORS.length];
+}
 
 function renderCharts() {
   renderIncomeExpenseChart();
@@ -369,11 +526,11 @@ function renderIncomeExpenseChart() {
     data: {
       labels: MONTHS,
       datasets: [
-        { label: 'Income', data: income, backgroundColor: '#c9a15a', borderRadius: 4, maxBarThickness: 18 },
-        { label: 'Expenses', data: expenses, backgroundColor: '#d46a6a', borderRadius: 4, maxBarThickness: 18 }
+        { label: 'Income', data: income, backgroundColor: '#0f9d80', borderRadius: 4, maxBarThickness: 18 },
+        { label: 'Expenses', data: expenses, backgroundColor: '#e6584f', borderRadius: 4, maxBarThickness: 18 }
       ]
     },
-    options: chartBaseOptions({ stacked: false })
+    options: chartBaseOptions()
   });
 }
 
@@ -394,15 +551,15 @@ function renderNetWorthChart() {
       datasets: [{
         label: 'Net worth (EUR)',
         data: points.map(p => Number(p.total_eur)),
-        borderColor: '#4fb88a',
-        backgroundColor: 'rgba(79,184,138,0.12)',
+        borderColor: '#0f9d80',
+        backgroundColor: 'rgba(15,157,128,0.10)',
         fill: true,
         tension: 0.3,
         pointRadius: points.length > 1 ? 2 : 4,
-        pointBackgroundColor: '#4fb88a'
+        pointBackgroundColor: '#0f9d80'
       }]
     },
-    options: chartBaseOptions({})
+    options: chartBaseOptions()
   });
 }
 
@@ -411,16 +568,17 @@ function renderCategoryBreakdownChart() {
   if (!ctx) return;
   const labels = state.categories.map(c => c.name);
   const data = state.categories.map(c => categoryYearTotal(c.id));
+  const colors = state.categories.map(c => colorForCategory(c.id));
   if (charts.categoryBreakdown) charts.categoryBreakdown.destroy();
   charts.categoryBreakdown = new Chart(ctx, {
     type: 'doughnut',
     data: {
       labels,
-      datasets: [{ data, backgroundColor: CHART_COLORS, borderColor: '#1a2030', borderWidth: 2 }]
+      datasets: [{ data, backgroundColor: colors, borderColor: '#ffffff', borderWidth: 2 }]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom', labels: { color: '#8891a6', font: { size: 11 }, boxWidth: 10, padding: 10 } } }
+      plugins: { legend: { position: 'bottom', labels: { color: '#767c8c', font: { size: 11 }, boxWidth: 10, padding: 10 } } }
     }
   });
 }
@@ -429,10 +587,10 @@ function chartBaseOptions() {
   return {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend: { labels: { color: '#8891a6', font: { size: 11 }, boxWidth: 10 } } },
+    plugins: { legend: { labels: { color: '#767c8c', font: { size: 11 }, boxWidth: 10 } } },
     scales: {
-      x: { ticks: { color: '#8891a6', font: { size: 10 } }, grid: { color: 'rgba(42,50,68,0.5)' } },
-      y: { ticks: { color: '#8891a6', font: { size: 10 } }, grid: { color: 'rgba(42,50,68,0.5)' } }
+      x: { ticks: { color: '#767c8c', font: { size: 10 } }, grid: { color: '#e6e8ef' } },
+      y: { ticks: { color: '#767c8c', font: { size: 10 } }, grid: { color: '#e6e8ef' } }
     }
   };
 }
@@ -475,7 +633,7 @@ function openNotePopover(anchor, catId, month) {
     if (!state.notes[catId]) state.notes[catId] = {};
     state.notes[catId][month] = val;
     await sb.from('spending_entries').upsert(
-      { user_id: uid(), category_id: catId, year: state.year, month: month, note: val },
+      { user_id: uid(), category_id: catId, year: state.year, month: month, note: val, updated_at: new Date().toISOString() },
       { onConflict: 'user_id,category_id,year,month' }
     );
     closeNotePopover();
@@ -530,11 +688,13 @@ document.getElementById('year-next').addEventListener('click', async () => { sta
 // ---------------- Nav ----------------
 
 document.querySelectorAll('.nav-item').forEach(item => {
-  item.addEventListener('click', () => {
+  item.addEventListener('click', async () => {
     document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     item.classList.add('active');
     document.getElementById(item.dataset.view).classList.add('active');
+    if (item.dataset.view === 'view-summary') renderCharts();
+    if (item.dataset.view === 'view-dashboard') { await loadDashboardData(); renderDashboard(); }
   });
 });
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ledger — Finance Tracker</title>
+<title>Konto — Finance Tracker</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
 <!-- ===================== Auth screen ===================== -->
 <div id="auth-screen">
   <div class="auth-box">
-    <p class="brand">Ledger</p>
+    <p class="brand">Konto</p>
     <p class="brand-sub">Personal Finance</p>
     <button id="google-signin-btn" class="google-btn">
       <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
@@ -30,13 +30,14 @@
 <div id="app-shell" style="display:none;">
 
   <nav class="sidebar">
-    <p class="brand">Ledger</p>
+    <p class="brand">Konto</p>
     <p class="brand-sub">Personal Finance</p>
 
-    <div class="nav-item active" data-view="view-summary"><span class="tick">01</span> Summary</div>
-    <div class="nav-item" data-view="view-portfolio"><span class="tick">02</span> Portfolio</div>
-    <div class="nav-item" data-view="view-spending"><span class="tick">03</span> Spending</div>
-    <div class="nav-item" data-view="view-settings"><span class="tick">04</span> Settings</div>
+    <div class="nav-item active" data-view="view-dashboard"><span class="tick">01</span> Dashboard</div>
+    <div class="nav-item" data-view="view-summary"><span class="tick">02</span> Summary</div>
+    <div class="nav-item" data-view="view-portfolio"><span class="tick">03</span> Portfolio</div>
+    <div class="nav-item" data-view="view-spending"><span class="tick">04</span> Spending</div>
+    <div class="nav-item" data-view="view-settings"><span class="tick">05</span> Settings</div>
 
     <div class="sidebar-footer">
       <div>Curs EUR (RON): <span class="mono" id="rate-input-display"></span></div>
@@ -46,8 +47,42 @@
 
   <main>
 
+    <!-- ---------- Dashboard view ---------- -->
+    <section id="view-dashboard" class="view active">
+      <div class="view-header">
+        <h1>Dashboard</h1>
+        <p>Your net worth, this month's activity, and what's trending.</p>
+      </div>
+
+      <div class="hero-card">
+        <div>
+          <div class="hero-label">Net worth (EUR)</div>
+          <div class="hero-value mono" id="hero-net-worth">0.00</div>
+          <div class="hero-sub" id="hero-net-worth-ron"></div>
+        </div>
+        <div class="hero-sparkline"><canvas id="chart-hero-sparkline"></canvas></div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat-card"><div class="stat-label">Income this month</div><div class="stat-value mono" id="dash-income">0.00</div></div>
+        <div class="stat-card"><div class="stat-label">Expenses this month</div><div class="stat-value mono" id="dash-expenses">0.00</div></div>
+        <div class="stat-card"><div class="stat-label">P/L this month</div><div class="stat-value mono" id="dash-pl">0.00</div></div>
+      </div>
+
+      <div class="dashboard-grid">
+        <div class="card">
+          <p class="card-title">Trending categories <span class="mono" id="dash-month-label" style="font-weight:400;text-transform:none;letter-spacing:normal;"></span></p>
+          <div id="trending-list"></div>
+        </div>
+        <div class="card">
+          <p class="card-title">Recent activity</p>
+          <div id="activity-list"></div>
+        </div>
+      </div>
+    </section>
+
     <!-- ---------- Summary view ---------- -->
-    <section id="view-summary" class="view active">
+    <section id="view-summary" class="view">
       <div class="view-header">
         <h1>Summary — <span class="year-label"></span></h1>
         <p>Income, expenses and monthly profit / loss.</p>
