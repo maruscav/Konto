@@ -10,8 +10,14 @@ let state = {
   cash: [],
   income: {},        // { "1": 6622, "2": ... } month -> amount
   categories: [],     // [{id, name, sort_order}]
-  spending: {}        // { categoryId: { "1": 250, "2": ... } }
+  spending: {},       // { categoryId: { "1": 250, "2": ... } }
+  notes: {},          // { categoryId: { "1": "note text", ... } }
+  netWorth: []        // [{ snapshot_date, total_eur }, ...] ordered by date
 };
+
+let charts = { incomeExpense: null, netWorth: null, categoryBreakdown: null };
+let lastSnapshotValue = null;
+let openPopover = null;
 
 const fmt = (n) => (Number(n) || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const uid = () => session?.user?.id;
@@ -46,7 +52,7 @@ async function initAuth() {
 // ---------------- Data load ----------------
 
 async function loadAll() {
-  await Promise.all([loadSettings(), loadBrokers(), loadCash(), loadIncome(), loadCategoriesAndSpending()]);
+  await Promise.all([loadSettings(), loadBrokers(), loadCash(), loadIncome(), loadCategoriesAndSpending(), loadNetWorthSnapshots()]);
   renderAll();
 }
 
@@ -77,8 +83,19 @@ async function loadCategoriesAndSpending() {
   state.categories = cats || [];
   const { data: entries } = await sb.from('spending_entries').select('*').eq('user_id', uid()).eq('year', state.year);
   state.spending = {};
-  state.categories.forEach(c => state.spending[c.id] = {});
-  (entries || []).forEach(e => { if (!state.spending[e.category_id]) state.spending[e.category_id] = {}; state.spending[e.category_id][e.month] = Number(e.amount); });
+  state.notes = {};
+  state.categories.forEach(c => { state.spending[c.id] = {}; state.notes[c.id] = {}; });
+  (entries || []).forEach(e => {
+    if (!state.spending[e.category_id]) state.spending[e.category_id] = {};
+    if (!state.notes[e.category_id]) state.notes[e.category_id] = {};
+    state.spending[e.category_id][e.month] = Number(e.amount);
+    if (e.note) state.notes[e.category_id][e.month] = e.note;
+  });
+}
+
+async function loadNetWorthSnapshots() {
+  const { data } = await sb.from('net_worth_snapshots').select('*').eq('user_id', uid()).order('snapshot_date');
+  state.netWorth = data || [];
 }
 
 // ---------------- Derived values ----------------
@@ -103,6 +120,7 @@ function renderAll() {
   renderSummary();
   renderPortfolio();
   renderSpending();
+  renderCharts();
 }
 
 function renderYearLabels() {
@@ -247,6 +265,22 @@ function renderPortfolio() {
   document.getElementById('grand-total-eur').textContent = fmt(grandVal);
   document.getElementById('grand-total-ron').textContent = fmt(grandVal * state.rate);
   document.getElementById('cash-total-eur').textContent = fmt(totalCashEUR);
+  snapshotNetWorth(grandVal);
+}
+
+async function snapshotNetWorth(totalEUR) {
+  // Avoid spamming writes: only save if the value actually changed since our last write.
+  if (lastSnapshotValue !== null && Math.abs(lastSnapshotValue - totalEUR) < 0.005) return;
+  lastSnapshotValue = totalEUR;
+  const today = new Date().toISOString().slice(0, 10);
+  const { data } = await sb.from('net_worth_snapshots')
+    .upsert({ user_id: uid(), snapshot_date: today, total_eur: totalEUR }, { onConflict: 'user_id,snapshot_date' })
+    .select().single();
+  if (data) {
+    const idx = state.netWorth.findIndex(s => s.snapshot_date === today);
+    if (idx >= 0) state.netWorth[idx] = data; else state.netWorth.push(data);
+    renderNetWorthChart();
+  }
 }
 
 function renderSpending() {
@@ -261,10 +295,23 @@ function renderSpending() {
     let cells = `<td><input class="name-input" data-cat="${cat.id}" data-field="catname" value="${cat.name}"/></td>`;
     for (let m = 1; m <= 12; m++) {
       const v = state.spending[cat.id]?.[m] || '';
-      cells += `<td><input type="number" step="0.01" class="mono" data-cat="${cat.id}" data-month="${m}" value="${v}" placeholder="—"/></td>`;
+      const hasNote = !!(state.notes[cat.id]?.[m]);
+      cells += `<td>
+        <div class="cell-wrap">
+          <input type="number" step="0.01" class="mono" data-cat="${cat.id}" data-month="${m}" value="${v}" placeholder="—"/>
+          <button type="button" class="note-icon ${hasNote ? 'has-note' : ''}" data-cat="${cat.id}" data-month="${m}" title="${hasNote ? 'View/edit note' : 'Add note'}">${hasNote ? '●' : '+'}</button>
+        </div>
+      </td>`;
     }
     cells += `<td class="row-actions"><button class="icon-btn" title="Remove category">✕</button></td>`;
     tr.innerHTML = cells;
+
+    tr.querySelectorAll('.note-icon').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openNotePopover(btn, btn.dataset.cat, parseInt(btn.dataset.month));
+      });
+    });
 
     tr.querySelectorAll('input[data-month]').forEach(el => {
       el.addEventListener('change', async (e) => {
@@ -299,6 +346,152 @@ function renderSpending() {
   totalCells += '<td></td>';
   totalRow.innerHTML = totalCells;
   tbody.appendChild(totalRow);
+}
+
+// ---------------- Charts ----------------
+
+const CHART_COLORS = ['#c9a15a', '#4fb88a', '#8891a6', '#d46a6a', '#6a8fd4', '#a86ad4', '#d4a86a', '#6ad4c0'];
+
+function renderCharts() {
+  renderIncomeExpenseChart();
+  renderNetWorthChart();
+  renderCategoryBreakdownChart();
+}
+
+function renderIncomeExpenseChart() {
+  const ctx = document.getElementById('chart-income-expense');
+  if (!ctx) return;
+  const income = [], expenses = [];
+  for (let m = 1; m <= 12; m++) { income.push(state.income[m] || 0); expenses.push(categoryTotalForMonth(m)); }
+  if (charts.incomeExpense) charts.incomeExpense.destroy();
+  charts.incomeExpense = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: MONTHS,
+      datasets: [
+        { label: 'Income', data: income, backgroundColor: '#c9a15a', borderRadius: 4, maxBarThickness: 18 },
+        { label: 'Expenses', data: expenses, backgroundColor: '#d46a6a', borderRadius: 4, maxBarThickness: 18 }
+      ]
+    },
+    options: chartBaseOptions({ stacked: false })
+  });
+}
+
+function renderNetWorthChart() {
+  const ctx = document.getElementById('chart-net-worth');
+  if (!ctx) return;
+  const points = state.netWorth;
+  if (charts.netWorth) charts.netWorth.destroy();
+  if (!points.length) {
+    charts.netWorth = null;
+    ctx.getContext('2d').clearRect(0, 0, ctx.width, ctx.height);
+    return;
+  }
+  charts.netWorth = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: points.map(p => p.snapshot_date),
+      datasets: [{
+        label: 'Net worth (EUR)',
+        data: points.map(p => Number(p.total_eur)),
+        borderColor: '#4fb88a',
+        backgroundColor: 'rgba(79,184,138,0.12)',
+        fill: true,
+        tension: 0.3,
+        pointRadius: points.length > 1 ? 2 : 4,
+        pointBackgroundColor: '#4fb88a'
+      }]
+    },
+    options: chartBaseOptions({})
+  });
+}
+
+function renderCategoryBreakdownChart() {
+  const ctx = document.getElementById('chart-category-breakdown');
+  if (!ctx) return;
+  const labels = state.categories.map(c => c.name);
+  const data = state.categories.map(c => categoryYearTotal(c.id));
+  if (charts.categoryBreakdown) charts.categoryBreakdown.destroy();
+  charts.categoryBreakdown = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{ data, backgroundColor: CHART_COLORS, borderColor: '#1a2030', borderWidth: 2 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { color: '#8891a6', font: { size: 11 }, boxWidth: 10, padding: 10 } } }
+    }
+  });
+}
+
+function chartBaseOptions() {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { labels: { color: '#8891a6', font: { size: 11 }, boxWidth: 10 } } },
+    scales: {
+      x: { ticks: { color: '#8891a6', font: { size: 10 } }, grid: { color: 'rgba(42,50,68,0.5)' } },
+      y: { ticks: { color: '#8891a6', font: { size: 10 } }, grid: { color: 'rgba(42,50,68,0.5)' } }
+    }
+  };
+}
+
+// ---------------- Spending notes popover ----------------
+
+function closeNotePopover() {
+  if (openPopover) { openPopover.remove(); openPopover = null; }
+}
+
+function openNotePopover(anchor, catId, month) {
+  if (openPopover) { const wasSameAnchor = openPopover.dataset.anchorFor === `${catId}-${month}`; closeNotePopover(); if (wasSameAnchor) return; }
+
+  const existing = state.notes[catId]?.[month] || '';
+  const pop = document.createElement('div');
+  pop.className = 'note-popover';
+  pop.dataset.anchorFor = `${catId}-${month}`;
+  pop.innerHTML = `
+    <textarea placeholder="Add a note for this entry...">${existing}</textarea>
+    <div class="note-actions">
+      <button class="note-close" type="button">Cancel</button>
+      <button class="note-save" type="button">Save</button>
+    </div>`;
+  document.body.appendChild(pop);
+
+  const rect = anchor.getBoundingClientRect();
+  const popWidth = 220;
+  let left = rect.left - popWidth + rect.width;
+  if (left < 8) left = 8;
+  if (left + popWidth > window.innerWidth - 8) left = window.innerWidth - popWidth - 8;
+  pop.style.left = left + 'px';
+  pop.style.top = (rect.bottom + 6) + 'px';
+
+  const textarea = pop.querySelector('textarea');
+  textarea.focus();
+
+  pop.querySelector('.note-close').addEventListener('click', closeNotePopover);
+  pop.querySelector('.note-save').addEventListener('click', async () => {
+    const val = textarea.value.trim();
+    if (!state.notes[catId]) state.notes[catId] = {};
+    state.notes[catId][month] = val;
+    await sb.from('spending_entries').upsert(
+      { user_id: uid(), category_id: catId, year: state.year, month: month, note: val },
+      { onConflict: 'user_id,category_id,year,month' }
+    );
+    closeNotePopover();
+    renderSpending();
+  });
+
+  setTimeout(() => {
+    document.addEventListener('click', function onOutside(e) {
+      if (!pop.contains(e.target) && e.target !== anchor) { closeNotePopover(); document.removeEventListener('click', onOutside); }
+    });
+  }, 0);
+  document.addEventListener('keydown', function onEsc(e) {
+    if (e.key === 'Escape') { closeNotePopover(); document.removeEventListener('keydown', onEsc); }
+  });
+
+  openPopover = pop;
 }
 
 // ---------------- Add row handlers ----------------

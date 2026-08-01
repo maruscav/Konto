@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
 :root {
   --bg: #12161f;
@@ -12,6 +12,8 @@
   --profit: #4fb88a;
   --loss: #d46a6a;
   --radius: 10px;
+  --radius-lg: 18px;
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 * { box-sizing: border-box; }
@@ -20,8 +22,9 @@ html, body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', system-ui, sans-serif;
   font-size: 14px;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -49,10 +52,10 @@ body {
 }
 
 .brand {
-  font-family: 'Fraunces', serif;
-  font-size: 20px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
   color: var(--text);
   margin: 0 0 2px 4px;
 }
@@ -69,15 +72,16 @@ body {
   display: flex;
   align-items: baseline;
   gap: 10px;
-  padding: 10px 12px;
-  border-radius: 8px;
+  padding: 11px 14px;
+  border-radius: 10px;
   cursor: pointer;
   color: var(--muted);
   font-size: 13.5px;
   font-weight: 500;
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.2s var(--ease), color 0.2s var(--ease);
   user-select: none;
 }
+.nav-item + .nav-item { margin-top: 2px; }
 .nav-item .tick { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--line); }
 .nav-item:hover { background: var(--surface); color: var(--text); }
 .nav-item.active { background: var(--surface-2); color: var(--text); }
@@ -91,36 +95,39 @@ body {
 }
 .sidebar-footer button {
   background: none; border: 1px solid var(--line); color: var(--muted);
-  border-radius: 6px; padding: 6px 10px; font-size: 12px; cursor: pointer; width: 100%;
-  margin-top: 8px; transition: border-color 0.15s, color 0.15s;
+  border-radius: 980px; padding: 7px 12px; font-size: 12px; cursor: pointer; width: 100%;
+  margin-top: 10px; transition: border-color 0.2s var(--ease), color 0.2s var(--ease);
 }
 .sidebar-footer button:hover { border-color: var(--gold-dim); color: var(--text); }
 
 main {
   flex: 1;
-  padding: 36px 44px;
-  max-width: 1200px;
+  padding: 44px 48px;
+  max-width: 1240px;
 }
 
 .view { display: none; }
 .view.active { display: block; }
 
-.view-header { margin-bottom: 24px; }
+.view-header { margin-bottom: 32px; }
 .view-header h1 {
-  font-family: 'Fraunces', serif;
-  font-weight: 600;
-  font-size: 24px;
-  margin: 0 0 4px 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 34px;
+  letter-spacing: -0.03em;
+  margin: 0 0 6px 0;
 }
-.view-header p { color: var(--muted); margin: 0; font-size: 13px; }
+.view-header p { color: var(--muted); margin: 0; font-size: 14.5px; }
 
 /* ---------- Cards / ledger tables ---------- */
 .card {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 22px 24px;
-  margin-bottom: 22px;
+  border-radius: var(--radius-lg);
+  padding: 28px 30px;
+  margin-bottom: 26px;
+  box-shadow: 0 12px 32px -16px rgba(0,0,0,0.45);
+  transition: box-shadow 0.25s var(--ease), transform 0.25s var(--ease);
 }
 
 .card-title {
@@ -128,7 +135,7 @@ main {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--gold-dim);
-  margin: 0 0 16px 0;
+  margin: 0 0 18px 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -145,7 +152,7 @@ table.ledger {
 }
 table.ledger.wide-8 { min-width: 720px; }
 table.ledger.wide-cash { min-width: 480px; }
-table.ledger.wide-months { min-width: 900px; }
+table.ledger.wide-months { min-width: 1080px; }
 table.ledger th {
   text-align: right;
   font-size: 11px;
@@ -203,42 +210,45 @@ table.ledger input.name-input { text-align: left; font-family: 'Inter', sans-ser
   background: none;
   border: 1px dashed var(--line);
   color: var(--muted);
-  border-radius: 6px;
-  padding: 7px 14px;
+  border-radius: 980px;
+  padding: 8px 16px;
   font-size: 12.5px;
   cursor: pointer;
-  transition: border-color 0.15s, color 0.15s;
+  transition: border-color 0.2s var(--ease), color 0.2s var(--ease);
 }
 .add-row-btn:hover { border-color: var(--gold-dim); color: var(--gold); }
 
 /* ---------- Summary cards row ---------- */
-.stat-row { display: flex; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
+.stat-row { display: flex; gap: 16px; margin-bottom: 26px; flex-wrap: wrap; }
 .stat-card {
   flex: 1; min-width: 180px;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 18px 20px;
+  border-radius: var(--radius-lg);
+  padding: 20px 22px;
+  box-shadow: 0 12px 32px -18px rgba(0,0,0,0.45);
+  transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease);
 }
+.stat-card:hover { transform: translateY(-2px); box-shadow: 0 16px 36px -16px rgba(0,0,0,0.55); }
 .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 8px; }
-.stat-value { font-family: 'IBM Plex Mono', monospace; font-size: 22px; font-weight: 600; }
+.stat-value { font-family: 'IBM Plex Mono', monospace; font-size: 26px; font-weight: 600; letter-spacing: -0.01em; }
 
 /* ---------- Settings ---------- */
 .field-row { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
 .field-row label { width: 160px; color: var(--muted); font-size: 13px; }
 .field-row input {
-  background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px;
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px;
   color: var(--text); padding: 8px 10px; font-family: 'IBM Plex Mono', monospace;
   width: 140px; font-size: 13px;
 }
 .field-row input:focus { outline: none; border-color: var(--gold-dim); }
 
 .save-btn {
-  background: var(--gold); color: #1a1408; border: none; border-radius: 6px;
-  padding: 9px 18px; font-weight: 600; font-size: 13px; cursor: pointer;
-  transition: filter 0.15s;
+  background: var(--gold); color: #1a1408; border: none; border-radius: 980px;
+  padding: 10px 22px; font-weight: 600; font-size: 13px; cursor: pointer;
+  transition: filter 0.2s var(--ease), transform 0.2s var(--ease);
 }
-.save-btn:hover { filter: brightness(1.08); }
+.save-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
 
 .save-hint { font-size: 11.5px; color: var(--muted); margin-left: 10px; }
 
@@ -247,10 +257,11 @@ table.ledger input.name-input { text-align: left; font-family: 'Inter', sans-ser
   min-height: 100vh; display: flex; align-items: center; justify-content: center;
 }
 .auth-box {
-  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
-  padding: 40px 36px; width: 340px; text-align: center;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 22px;
+  padding: 44px 38px; width: 340px; text-align: center;
+  box-shadow: 0 24px 60px -24px rgba(0,0,0,0.6);
 }
-.auth-box .brand { font-size: 24px; margin-bottom: 4px; }
+.auth-box .brand { font-size: 26px; margin-bottom: 4px; }
 .auth-box .brand-sub { margin-bottom: 24px; }
 .auth-box input {
   width: 100%; background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px;
@@ -258,16 +269,62 @@ table.ledger input.name-input { text-align: left; font-family: 'Inter', sans-ser
 }
 .auth-box input:focus { outline: none; border-color: var(--gold-dim); }
 .auth-box button {
-  width: 100%; background: var(--gold); color: #1a1408; border: none; border-radius: 6px;
-  padding: 10px; font-weight: 600; font-size: 13.5px; cursor: pointer; margin-top: 4px;
+  width: 100%; background: var(--gold); color: #1a1408; border: none; border-radius: 980px;
+  padding: 11px; font-weight: 600; font-size: 13.5px; cursor: pointer; margin-top: 4px;
+  transition: filter 0.2s var(--ease), transform 0.2s var(--ease);
 }
+.auth-box button:hover { transform: translateY(-1px); }
 .google-btn {
   display: flex; align-items: center; justify-content: center; gap: 10px;
   background: var(--surface-2) !important; color: var(--text) !important;
-  border: 1px solid var(--line) !important; transition: border-color 0.15s;
+  border: 1px solid var(--line) !important; transition: border-color 0.2s var(--ease);
 }
 .google-btn:hover { border-color: var(--gold-dim) !important; }
 .auth-msg { font-size: 12.5px; color: var(--muted); margin-top: 14px; min-height: 16px; }
+
+/* ---------- Charts ---------- */
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+.chart-card { margin-bottom: 0; }
+.chart-wrap { position: relative; height: 240px; }
+
+/* ---------- Spending notes ---------- */
+.cell-wrap { display: flex; align-items: center; gap: 4px; }
+.cell-wrap input { flex: 1; min-width: 0; }
+.note-icon {
+  flex-shrink: 0; width: 18px; height: 18px; border: none; background: none;
+  color: var(--line); cursor: pointer; font-size: 12px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  transition: color 0.2s var(--ease);
+}
+.note-icon:hover { color: var(--muted); }
+.note-icon.has-note { color: var(--gold); }
+
+.note-popover {
+  position: fixed;
+  width: 220px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 20px 48px -16px rgba(0,0,0,0.6);
+  z-index: 1000;
+}
+.note-popover textarea {
+  width: 100%; min-height: 64px; resize: vertical;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
+  color: var(--text); padding: 8px; font-size: 12.5px; font-family: 'Inter', sans-serif;
+}
+.note-popover textarea:focus { outline: none; border-color: var(--gold-dim); }
+.note-popover .note-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+.note-popover button {
+  border: none; border-radius: 980px; padding: 5px 12px; font-size: 11.5px; cursor: pointer;
+}
+.note-popover .note-save { background: var(--gold); color: #1a1408; font-weight: 600; }
+.note-popover .note-close { background: none; color: var(--muted); }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
@@ -286,4 +343,6 @@ table.ledger input.name-input { text-align: left; font-family: 'Inter', sans-ser
   table.ledger td, table.ledger th { padding: 11px 8px; }
   table.ledger input, table.ledger select { font-size: 14px; }
   .icon-btn { font-size: 16px; padding: 6px 10px; }
+  .chart-wrap { height: 200px; }
+  .chart-grid { grid-template-columns: 1fr; }
 }
