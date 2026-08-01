@@ -61,10 +61,12 @@
             <button class="icon-btn" id="year-next" title="Next year">›</button>
           </span>
         </p>
+        <div class="table-scroll">
         <table class="ledger">
           <thead><tr><th>Month</th><th>Income</th><th>Expenses</th><th>P / L</th></tr></thead>
           <tbody id="summary-tbody"></tbody>
         </table>
+        </div>
       </div>
     </section>
 
@@ -83,22 +85,26 @@
 
       <div class="card">
         <p class="card-title">Brokers</p>
-        <table class="ledger">
+        <div class="table-scroll">
+        <table class="ledger wide-8">
           <thead><tr>
             <th>Broker</th><th>Ccy</th><th>Investitie</th><th>Valoare port</th>
             <th>Eval (EUR)</th><th>Randament %</th><th>P/L</th><th>P/L (EUR)</th><th></th>
           </tr></thead>
           <tbody id="brokers-tbody"></tbody>
         </table>
+        </div>
         <button class="add-row-btn" id="add-broker-btn">+ Add broker</button>
       </div>
 
       <div class="card">
         <p class="card-title">Cash & bank accounts</p>
-        <table class="ledger">
+        <div class="table-scroll">
+        <table class="ledger wide-cash">
           <thead><tr><th>Account</th><th>Ccy</th><th>Amount</th><th>Eval (EUR)</th><th></th></tr></thead>
           <tbody id="cash-tbody"></tbody>
         </table>
+        </div>
         <button class="add-row-btn" id="add-cash-btn">+ Add account</button>
       </div>
     </section>
@@ -110,12 +116,14 @@
         <p>Discretionary spending by category, feeds the Expenses column in Summary.</p>
       </div>
 
-      <div class="card" style="overflow-x:auto;">
+      <div class="card">
         <p class="card-title">Categories</p>
-        <table class="ledger">
+        <div class="table-scroll">
+        <table class="ledger wide-months">
           <thead><tr id="spending-thead-row"></tr></thead>
           <tbody id="spending-tbody"></tbody>
         </table>
+        </div>
         <button class="add-row-btn" id="add-category-btn">+ Add category</button>
       </div>
     </section>
