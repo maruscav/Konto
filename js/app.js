@@ -28,13 +28,14 @@ async function initAuth() {
   });
   if (session) { document.getElementById('auth-screen').style.display = 'none'; document.getElementById('app-shell').style.display = 'flex'; loadAll(); }
 
-  document.getElementById('send-link-btn').addEventListener('click', async () => {
-    const email = document.getElementById('auth-email').value.trim();
+  document.getElementById('google-signin-btn').addEventListener('click', async () => {
     const msg = document.getElementById('auth-msg');
-    if (!email) { msg.textContent = "Enter your email first."; return; }
-    msg.textContent = "Sending link...";
-    const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.href } });
-    msg.textContent = error ? error.message : "Check your inbox for the sign-in link.";
+    msg.textContent = "Redirecting to Google...";
+    const { error } = await sb.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin + window.location.pathname }
+    });
+    if (error) msg.textContent = error.message;
   });
 
   document.getElementById('sign-out-btn').addEventListener('click', async () => {
