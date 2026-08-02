@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Konto — Finance Tracker</title>
+<title>Ledger — Finance Tracker</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
 <!-- ===================== Auth screen ===================== -->
 <div id="auth-screen">
   <div class="auth-box">
-    <p class="brand">Konto</p>
+    <p class="brand">Ledger</p>
     <p class="brand-sub">Personal Finance</p>
     <button id="google-signin-btn" class="google-btn">
       <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
@@ -26,11 +26,21 @@
   </div>
 </div>
 
+<!-- ===================== Biometric lock screen ===================== -->
+<div id="lock-screen" style="display:none;">
+  <div class="auth-box">
+    <p class="brand">Ledger</p>
+    <p class="brand-sub">Locked</p>
+    <button id="unlock-btn">🔓 Unlock with Face ID / Touch ID</button>
+    <p class="auth-msg" id="lock-msg"></p>
+  </div>
+</div>
+
 <!-- ===================== App shell ===================== -->
 <div id="app-shell" style="display:none;">
 
   <nav class="sidebar">
-    <p class="brand">Konto</p>
+    <p class="brand">Ledger</p>
     <p class="brand-sub">Personal Finance</p>
 
     <div class="nav-item active" data-view="view-dashboard"><span class="tick">01</span> Dashboard</div>
@@ -41,6 +51,7 @@
 
     <div class="sidebar-footer">
       <div>Curs EUR (RON): <span class="mono" id="rate-input-display"></span></div>
+      <button id="lock-now-btn">🔒 Lock now</button>
       <button id="sign-out-btn">Sign out</button>
     </div>
   </nav>
@@ -200,6 +211,16 @@
         </div>
         <button class="save-btn" id="save-rate-btn">Save rate</button>
         <span class="save-hint" id="rate-save-hint"></span>
+      </div>
+
+      <div class="card" style="max-width:420px;">
+        <p class="card-title">Biometric lock</p>
+        <p style="color:var(--muted); font-size:12.5px; margin-top:-8px;">
+          Requires Face ID / Touch ID / Windows Hello to open the app on this device.
+        </p>
+        <div id="webauthn-device-list"></div>
+        <button class="add-row-btn" id="register-biometric-btn">+ Enroll this device</button>
+        <p class="auth-msg" id="biometric-msg" style="margin-top:8px;"></p>
       </div>
     </section>
 

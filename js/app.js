@@ -12,7 +12,8 @@ let state = {
   categories: [],     // [{id, name, sort_order}]
   spending: {},       // { categoryId: { "1": 250, "2": ... } }
   notes: {},          // { categoryId: { "1": "note text", ... } }
-  netWorth: []        // [{ snapshot_date, total_eur }, ...] ordered by date
+  netWorth: [],       // [{ snapshot_date, total_eur }, ...] ordered by date
+  webauthnCredentials: []  // [{ id, credential_id, label, created_at }]
 };
 
 let charts = { incomeExpense: null, netWorth: null, categoryBreakdown: null, heroSparkline: null };
@@ -21,6 +22,7 @@ let openPopover = null;
 
 const fmt = (n) => (Number(n) || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const uid = () => session?.user?.id;
+const escapeHtml = (str) => String(str ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 
 // ---------------- Auth ----------------
 
@@ -29,10 +31,10 @@ async function initAuth() {
   session = data.session;
   sb.auth.onAuthStateChange((_event, s) => {
     session = s;
-    if (session) { document.getElementById('auth-screen').style.display = 'none'; document.getElementById('app-shell').style.display = 'flex'; loadAll(); }
-    else { document.getElementById('auth-screen').style.display = 'flex'; document.getElementById('app-shell').style.display = 'none'; }
+    if (session) { document.getElementById('auth-screen').style.display = 'none'; proceedAfterAuth(); }
+    else { document.getElementById('auth-screen').style.display = 'flex'; document.getElementById('lock-screen').style.display = 'none'; document.getElementById('app-shell').style.display = 'none'; }
   });
-  if (session) { document.getElementById('auth-screen').style.display = 'none'; document.getElementById('app-shell').style.display = 'flex'; loadAll(); }
+  if (session) { document.getElementById('auth-screen').style.display = 'none'; await proceedAfterAuth(); }
 
   document.getElementById('google-signin-btn').addEventListener('click', async () => {
     const msg = document.getElementById('auth-msg');
@@ -45,8 +47,140 @@ async function initAuth() {
   });
 
   document.getElementById('sign-out-btn').addEventListener('click', async () => {
+    sessionStorage.removeItem('biometric-verified');
     await sb.auth.signOut();
   });
+
+  document.getElementById('lock-now-btn').addEventListener('click', () => {
+    if (!state.webauthnCredentials.length) { alert('Enroll this device in Settings first to enable locking.'); return; }
+    sessionStorage.removeItem('biometric-verified');
+    document.getElementById('app-shell').style.display = 'none';
+    document.getElementById('lock-screen').style.display = 'flex';
+  });
+
+  document.getElementById('unlock-btn').addEventListener('click', unlockWithBiometric);
+  document.getElementById('register-biometric-btn').addEventListener('click', registerBiometric);
+}
+
+// After a valid Supabase session exists, decide whether a biometric
+// unlock is required before showing the app, or whether we can load straight in.
+async function proceedAfterAuth() {
+  await loadWebauthnCredentials();
+  const needsUnlock = state.webauthnCredentials.length > 0 && sessionStorage.getItem('biometric-verified') !== '1';
+  if (needsUnlock) {
+    document.getElementById('app-shell').style.display = 'none';
+    document.getElementById('lock-screen').style.display = 'flex';
+  } else {
+    document.getElementById('lock-screen').style.display = 'none';
+    document.getElementById('app-shell').style.display = 'flex';
+    loadAll();
+  }
+}
+
+// ---------------- Biometric lock (WebAuthn) ----------------
+
+function bufToBase64url(buf) {
+  const bytes = new Uint8Array(buf);
+  let str = '';
+  for (const b of bytes) str += String.fromCharCode(b);
+  return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function base64urlToBuf(b64url) {
+  const pad = (4 - (b64url.length % 4)) % 4;
+  const b64 = b64url.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat(pad);
+  const str = atob(b64);
+  const bytes = new Uint8Array(str.length);
+  for (let i = 0; i < str.length; i++) bytes[i] = str.charCodeAt(i);
+  return bytes.buffer;
+}
+
+function webauthnSupported() {
+  return !!(window.PublicKeyCredential && navigator.credentials);
+}
+
+async function loadWebauthnCredentials() {
+  if (!uid()) { state.webauthnCredentials = []; return; }
+  const { data } = await sb.from('webauthn_credentials').select('*').eq('user_id', uid()).order('created_at');
+  state.webauthnCredentials = data || [];
+}
+
+async function registerBiometric() {
+  const msg = document.getElementById('biometric-msg');
+  if (!webauthnSupported()) { msg.textContent = "This browser doesn't support Face ID / Touch ID / Windows Hello."; return; }
+  msg.textContent = "Follow your device's prompt...";
+  try {
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+    const userIdBytes = new TextEncoder().encode(uid());
+    const cred = await navigator.credentials.create({
+      publicKey: {
+        challenge,
+        rp: { name: 'Ledger' },
+        user: { id: userIdBytes, name: session.user.email || 'user', displayName: session.user.email || 'User' },
+        pubKeyCredParams: [{ alg: -7, type: 'public-key' }, { alg: -257, type: 'public-key' }],
+        authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'preferred' },
+        timeout: 60000,
+        attestation: 'none'
+      }
+    });
+    if (!cred) { msg.textContent = "Enrollment was cancelled."; return; }
+    const credentialId = bufToBase64url(cred.rawId);
+    const label = (prompt('Name this device (e.g. "iPhone", "MacBook"):', navigator.platform || 'Device') || 'Device').slice(0, 60);
+    await sb.from('webauthn_credentials').insert({ user_id: uid(), credential_id: credentialId, label });
+    await loadWebauthnCredentials();
+    renderBiometricSettings();
+    msg.textContent = "Device enrolled.";
+  } catch (err) {
+    msg.textContent = err.message || "Enrollment failed.";
+  }
+}
+
+async function deleteWebauthnCredential(id) {
+  await sb.from('webauthn_credentials').delete().eq('id', id);
+  state.webauthnCredentials = state.webauthnCredentials.filter(c => c.id !== id);
+  renderBiometricSettings();
+}
+
+function renderBiometricSettings() {
+  const list = document.getElementById('webauthn-device-list');
+  if (!list) return;
+  if (!state.webauthnCredentials.length) {
+    list.innerHTML = '<div class="empty-state">No devices enrolled — the app opens straight in.</div>';
+    return;
+  }
+  list.innerHTML = state.webauthnCredentials.map(c => `
+    <div class="device-row">
+      <div>
+        <div class="device-name">${escapeHtml(c.label || 'Device')}</div>
+        <div class="device-date">Enrolled ${new Date(c.created_at).toLocaleDateString()}</div>
+      </div>
+      <button class="icon-btn" data-id="${c.id}" title="Remove">✕</button>
+    </div>`).join('');
+  list.querySelectorAll('.icon-btn').forEach(btn => {
+    btn.addEventListener('click', () => deleteWebauthnCredential(btn.dataset.id));
+  });
+}
+
+async function unlockWithBiometric() {
+  const msg = document.getElementById('lock-msg');
+  if (!webauthnSupported()) { msg.textContent = "This browser doesn't support biometric unlock."; return; }
+  if (!state.webauthnCredentials.length) { msg.textContent = "No device enrolled yet."; return; }
+  msg.textContent = "Follow your device's prompt...";
+  try {
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+    const allowCredentials = state.webauthnCredentials.map(c => ({ id: base64urlToBuf(c.credential_id), type: 'public-key' }));
+    const assertion = await navigator.credentials.get({
+      publicKey: { challenge, allowCredentials, userVerification: 'required', timeout: 60000 }
+    });
+    if (assertion) {
+      sessionStorage.setItem('biometric-verified', '1');
+      document.getElementById('lock-screen').style.display = 'none';
+      document.getElementById('app-shell').style.display = 'flex';
+      loadAll();
+    }
+  } catch (err) {
+    msg.textContent = "Verification failed or was cancelled.";
+  }
 }
 
 // ---------------- Data load ----------------
@@ -130,10 +264,10 @@ async function loadDashboardData() {
   const activity = [];
   (recentSpend || []).forEach(e => {
     if (Number(e.amount) === 0 && !e.note) return;
-    activity.push({ icon: '💳', title: `${e.spending_categories?.name || 'Spending'} — ${MONTHS[e.month - 1]} ${e.year}`, time: e.updated_at, amount: Number(e.amount) });
+    activity.push({ icon: '💳', title: `${escapeHtml(e.spending_categories?.name || 'Spending')} — ${MONTHS[e.month - 1]} ${e.year}`, time: e.updated_at, amount: Number(e.amount) });
   });
-  (recentCash || []).forEach(c => activity.push({ icon: '🏦', title: `${c.name} updated`, time: c.updated_at, amount: Number(c.amount) }));
-  (recentBrokers || []).forEach(b => activity.push({ icon: '📈', title: `${b.name} updated`, time: b.updated_at, amount: Number(b.valoare_port) }));
+  (recentCash || []).forEach(c => activity.push({ icon: '🏦', title: `${escapeHtml(c.name)} updated`, time: c.updated_at, amount: Number(c.amount) }));
+  (recentBrokers || []).forEach(b => activity.push({ icon: '📈', title: `${escapeHtml(b.name)} updated`, time: b.updated_at, amount: Number(b.valoare_port) }));
   (recentIncome || []).forEach(i => activity.push({ icon: '💰', title: `Income — ${MONTHS[i.month - 1]} ${i.year}`, time: i.updated_at, amount: Number(i.income) }));
   activity.sort((a, b) => new Date(b.time) - new Date(a.time));
 
@@ -164,6 +298,7 @@ function renderAll() {
   renderSpending();
   renderCharts();
   renderDashboard();
+  renderBiometricSettings();
 }
 
 function renderYearLabels() {
@@ -227,7 +362,7 @@ function renderPortfolio() {
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><input class="name-input" data-field="name" value="${b.name}"/></td>
+      <td><input class="name-input" data-field="name" value="${escapeHtml(b.name)}"/></td>
       <td>
         <select data-field="currency" class="mono">
           <option value="RON" ${b.currency==='RON'?'selected':''}>RON</option>
@@ -275,7 +410,7 @@ function renderPortfolio() {
     totalCashEUR += eur;
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><input class="name-input" data-field="name" value="${c.name}"/></td>
+      <td><input class="name-input" data-field="name" value="${escapeHtml(c.name)}"/></td>
       <td>
         <select data-field="currency" class="mono">
           <option value="RON" ${c.currency==='RON'?'selected':''}>RON</option>
@@ -336,7 +471,7 @@ function renderSpending() {
 
   state.categories.forEach(cat => {
     const tr = document.createElement('tr');
-    let cells = `<td><input class="name-input" data-cat="${cat.id}" data-field="catname" value="${cat.name}"/></td>`;
+    let cells = `<td><input class="name-input" data-cat="${cat.id}" data-field="catname" value="${escapeHtml(cat.name)}"/></td>`;
     for (let m = 1; m <= 12; m++) {
       const v = state.spending[cat.id]?.[m] || '';
       const hasNote = !!(state.notes[cat.id]?.[m]);
@@ -433,7 +568,7 @@ function renderDashboard() {
       return `<div class="trend-row">
         <div class="trend-left">
           <span class="cat-dot" style="background:${colorForCategory(c.id)}"></span>
-          <span class="trend-name">${c.name}</span>
+          <span class="trend-name">${escapeHtml(c.name)}</span>
         </div>
         <div class="trend-right">
           <div class="trend-amount">${fmt(c.cur)}</div>
@@ -452,7 +587,7 @@ function renderDashboard() {
         <div class="activity-main">
           <div class="activity-icon">${a.icon}</div>
           <div class="activity-text">
-            <div class="activity-title">${a.title}</div>
+            <div class="activity-title">${escapeHtml(a.title)}</div>
             <div class="activity-time">${timeAgo(a.time)}</div>
           </div>
         </div>
@@ -609,7 +744,7 @@ function openNotePopover(anchor, catId, month) {
   pop.className = 'note-popover';
   pop.dataset.anchorFor = `${catId}-${month}`;
   pop.innerHTML = `
-    <textarea placeholder="Add a note for this entry...">${existing}</textarea>
+    <textarea placeholder="Add a note for this entry...">${escapeHtml(existing)}</textarea>
     <div class="note-actions">
       <button class="note-close" type="button">Cancel</button>
       <button class="note-save" type="button">Save</button>
