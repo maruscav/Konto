@@ -815,6 +815,62 @@ document.getElementById('save-rate-btn').addEventListener('click', async () => {
   hint.textContent = 'Saved.'; setTimeout(() => hint.textContent = '', 1500);
 });
 
+document.getElementById('settings-lock-btn').addEventListener('click', () => {
+  if (!state.webauthnCredentials.length) { alert('Enroll a device above first to enable locking.'); return; }
+  sessionStorage.removeItem('biometric-verified');
+  document.getElementById('app-shell').style.display = 'none';
+  document.getElementById('lock-screen').style.display = 'flex';
+});
+
+document.getElementById('settings-signout-btn').addEventListener('click', async () => {
+  sessionStorage.removeItem('biometric-verified');
+  await sb.auth.signOut();
+});
+
+function renderDeleteAccountButton() {
+  const flow = document.getElementById('delete-account-flow');
+  flow.innerHTML = `<button class="add-row-btn" id="delete-account-btn" style="border-color:var(--loss); color:var(--loss);">Delete my account</button>`;
+  document.getElementById('delete-account-btn').addEventListener('click', showDeleteConfirmUI);
+}
+
+function showDeleteConfirmUI() {
+  const flow = document.getElementById('delete-account-flow');
+  flow.innerHTML = `
+    <p style="font-size:12.5px; color:var(--text); margin-bottom:8px;">
+      Type <strong>DELETE</strong> to confirm — this removes all your data permanently and cannot be undone.
+    </p>
+    <input type="text" id="delete-confirm-input" class="confirm-input mono" placeholder="DELETE" style="margin-bottom:10px;"/>
+    <div style="display:flex; gap:10px;">
+      <button id="delete-confirm-btn" class="save-btn" style="background:var(--loss);">Permanently delete</button>
+      <button id="delete-cancel-btn" class="add-row-btn">Cancel</button>
+    </div>
+    <p class="auth-msg" id="delete-msg"></p>`;
+  document.getElementById('delete-cancel-btn').addEventListener('click', renderDeleteAccountButton);
+  document.getElementById('delete-confirm-btn').addEventListener('click', async () => {
+    const val = document.getElementById('delete-confirm-input').value.trim();
+    const msg = document.getElementById('delete-msg');
+    if (val !== 'DELETE') { msg.textContent = 'Type DELETE exactly (all caps) to confirm.'; return; }
+    document.getElementById('delete-confirm-btn').disabled = true;
+    document.getElementById('delete-cancel-btn').disabled = true;
+    msg.textContent = 'Deleting your data...';
+    await deleteAccount(msg);
+  });
+}
+
+document.getElementById('delete-account-btn').addEventListener('click', showDeleteConfirmUI);
+
+async function deleteAccount(msg) {
+  try {
+    const { error } = await sb.rpc('delete_user');
+    if (error) throw error;
+    if (msg) msg.textContent = 'Account deleted. Signing out...';
+    sessionStorage.removeItem('biometric-verified');
+    setTimeout(() => sb.auth.signOut(), 1200);
+  } catch (err) {
+    if (msg) msg.textContent = 'Something went wrong: ' + err.message;
+  }
+}
+
 // ---------------- Year navigation ----------------
 
 document.getElementById('year-prev').addEventListener('click', async () => { state.year--; await loadIncome(); await loadCategoriesAndSpending(); renderAll(); });

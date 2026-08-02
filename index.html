@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ledger — Finance Tracker</title>
+<title>Konto — Finance Tracker</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -221,6 +221,28 @@
         <div id="webauthn-device-list"></div>
         <button class="add-row-btn" id="register-biometric-btn">+ Enroll this device</button>
         <p class="auth-msg" id="biometric-msg" style="margin-top:8px;"></p>
+      </div>
+
+      <div class="card" style="max-width:420px;">
+        <p class="card-title">Account</p>
+        <p style="color:var(--muted); font-size:12.5px; margin-top:-8px;">
+          Also available here on mobile, where the sidebar footer is hidden to save space.
+        </p>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="add-row-btn" id="settings-lock-btn">🔒 Lock now</button>
+          <button class="add-row-btn" id="settings-signout-btn">Sign out</button>
+        </div>
+      </div>
+
+      <div class="card" style="max-width:420px; border-color:var(--loss);">
+        <p class="card-title" style="color:var(--loss);">Danger zone</p>
+        <p style="color:var(--muted); font-size:12.5px; margin-top:-8px;">
+          Permanently deletes every number you've entered — income, spending,
+          portfolio, cash, snapshots, and enrolled devices. This cannot be undone.
+        </p>
+        <div id="delete-account-flow">
+          <button class="add-row-btn" id="delete-account-btn" style="border-color:var(--loss); color:var(--loss);">Delete my account</button>
+        </div>
       </div>
     </section>
 

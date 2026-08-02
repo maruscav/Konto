@@ -312,6 +312,12 @@ table.ledger select {
 .device-row .device-name { font-weight: 600; }
 .device-row .device-date { color: var(--muted); font-size: 11.5px; }
 
+.confirm-input {
+  width: 100%; background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px;
+  color: var(--text); padding: 9px 11px; font-size: 13px; font-family: 'IBM Plex Mono', monospace;
+}
+.confirm-input:focus { outline: none; border-color: var(--loss); }
+
 /* ---------- Settings ---------- */
 .field-row { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
 .field-row label { width: 160px; color: var(--muted); font-size: 13px; }
