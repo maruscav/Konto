@@ -480,6 +480,9 @@ table.ledger td.col-highlight input:focus { border-bottom-color: var(--highlight
   }
   table.ledger.wide-8 td.row-actions, table.ledger.wide-cash td.row-actions { justify-content: flex-end; }
   table.ledger.wide-8 td.row-actions::before, table.ledger.wide-cash td.row-actions::before { content: none; }
+  /* colspan doesn't apply once rows go flex, so totals rows leave blank placeholder
+     cells (Randament/P&L on the broker total row) — hide any cell that's truly empty */
+  table.ledger.wide-8 td:empty, table.ledger.wide-cash td:empty { display: none; }
 
   /* Spending tracker: show one month at a time instead of a 12-col scroller */
   .mobile-month-nav { display: flex; }
