@@ -156,7 +156,7 @@
         <div class="table-scroll">
         <table class="ledger wide-8">
           <thead><tr>
-            <th>Broker</th><th>Ccy</th><th>Investitie</th><th>Valoare port</th>
+            <th>Broker</th><th>Ccy</th><th>Investitie</th><th class="col-highlight">Valoare port</th>
             <th>Eval (EUR)</th><th>Randament %</th><th>P/L</th><th>P/L (EUR)</th><th></th>
           </tr></thead>
           <tbody id="brokers-tbody"></tbody>
@@ -186,6 +186,11 @@
 
       <div class="card">
         <p class="card-title">Categories</p>
+        <div class="mobile-month-nav">
+          <button class="icon-btn" id="mobile-month-prev" type="button">‹</button>
+          <span class="mono" id="mobile-month-label"></span>
+          <button class="icon-btn" id="mobile-month-next" type="button">›</button>
+        </div>
         <div class="table-scroll">
         <table class="ledger wide-months">
           <thead><tr id="spending-thead-row"></tr></thead>

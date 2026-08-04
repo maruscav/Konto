@@ -6,6 +6,7 @@ let session = null;
 let state = {
   year: new Date().getFullYear(),
   rate: 5.00,
+  mobileSpendMonth: new Date().getMonth() + 1,
   brokers: [],
   cash: [],
   income: {},        // { "1": 6622, "2": ... } month -> amount
@@ -23,6 +24,24 @@ let openPopover = null;
 const fmt = (n) => (Number(n) || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const uid = () => session?.user?.id;
 const escapeHtml = (str) => String(str ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+
+// ---------------- Undo toast ----------------
+
+function showUndoToast(message, undoFn) {
+  const existing = document.querySelector('.undo-toast');
+  if (existing) existing.remove();
+  const toast = document.createElement('div');
+  toast.className = 'undo-toast';
+  toast.innerHTML = `<span>${message}</span><button class="undo-btn" type="button">Undo</button>`;
+  document.body.appendChild(toast);
+  const remove = () => toast.remove();
+  const timer = setTimeout(remove, 6000);
+  toast.querySelector('.undo-btn').addEventListener('click', () => {
+    clearTimeout(timer);
+    undoFn();
+    remove();
+  });
+}
 
 // ---------------- Auth ----------------
 
@@ -322,10 +341,10 @@ function renderSummary() {
     totalIncome += income; totalExpenses += expenses;
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${MONTHS[m-1]}</td>
-      <td><input type="number" step="0.01" class="mono" data-month="${m}" value="${income || ''}" placeholder="0.00"/></td>
-      <td class="mono muted-cell">${fmt(expenses)}</td>
-      <td class="mono ${pl >= 0 ? 'pos' : 'neg'}">${fmt(pl)}</td>`;
+      <td data-label="Month">${MONTHS[m-1]}</td>
+      <td data-label="Income"><input type="number" step="0.01" class="mono" data-month="${m}" value="${income || ''}" placeholder="0.00"/></td>
+      <td class="mono muted-cell" data-label="Expenses">${fmt(expenses)}</td>
+      <td class="mono ${pl >= 0 ? 'pos' : 'neg'}" data-label="P / L">${fmt(pl)}</td>`;
     tr.querySelector('input').addEventListener('change', async (e) => {
       const val = parseFloat(e.target.value) || 0;
       state.income[m] = val;
@@ -337,7 +356,7 @@ function renderSummary() {
   const totalRow = document.createElement('tr');
   totalRow.className = 'total-row';
   const totalPL = totalIncome - totalExpenses;
-  totalRow.innerHTML = `<td>Total</td><td class="mono">${fmt(totalIncome)}</td><td class="mono">${fmt(totalExpenses)}</td><td class="mono ${totalPL >= 0 ? 'pos' : 'neg'}">${fmt(totalPL)}</td>`;
+  totalRow.innerHTML = `<td data-label="Month">Total</td><td class="mono" data-label="Income">${fmt(totalIncome)}</td><td class="mono" data-label="Expenses">${fmt(totalExpenses)}</td><td class="mono ${totalPL >= 0 ? 'pos' : 'neg'}" data-label="P / L">${fmt(totalPL)}</td>`;
   tbody.appendChild(totalRow);
 
   document.getElementById('stat-income').textContent = fmt(totalIncome);
@@ -362,29 +381,38 @@ function renderPortfolio() {
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><input class="name-input" data-field="name" value="${escapeHtml(b.name)}"/></td>
-      <td>
+      <td data-label="Broker"><input class="name-input" data-field="name" value="${escapeHtml(b.name)}"/></td>
+      <td data-label="Ccy">
         <select data-field="currency" class="mono">
           <option value="RON" ${b.currency==='RON'?'selected':''}>RON</option>
           <option value="EUR" ${b.currency==='EUR'?'selected':''}>EUR</option>
         </select>
       </td>
-      <td><input type="number" step="0.01" class="mono" data-field="investitie" value="${b.investitie}"/></td>
-      <td><input type="number" step="0.01" class="mono" data-field="valoare_port" value="${b.valoare_port}"/></td>
-      <td class="mono muted-cell">${fmt(evalEUR)}</td>
-      <td class="mono ${randament >= 0 ? 'pos' : 'neg'}">${randament.toFixed(2)}%</td>
-      <td class="mono ${pl >= 0 ? 'pos' : 'neg'}">${fmt(pl)}</td>
-      <td class="mono ${plEUR >= 0 ? 'pos' : 'neg'}">${fmt(plEUR)}</td>
-      <td class="row-actions"><button class="icon-btn" title="Remove">✕</button></td>`;
+      <td data-label="Investitie"><input type="number" step="0.01" class="mono" data-field="investitie" value="${b.investitie}"/></td>
+      <td class="col-highlight" data-label="Valoare port"><input type="number" step="0.01" class="mono" data-field="valoare_port" value="${b.valoare_port}"/></td>
+      <td class="mono muted-cell" data-label="Eval (EUR)">${fmt(evalEUR)}</td>
+      <td class="mono ${randament >= 0 ? 'pos' : 'neg'}" data-label="Randament %">${randament.toFixed(2)}%</td>
+      <td class="mono ${pl >= 0 ? 'pos' : 'neg'}" data-label="P/L">${fmt(pl)}</td>
+      <td class="mono ${plEUR >= 0 ? 'pos' : 'neg'}" data-label="P/L (EUR)">${fmt(plEUR)}</td>
+      <td class="row-actions" data-label=""><button class="icon-btn" title="Remove">✕</button></td>`;
 
     tr.querySelectorAll('input,select').forEach(el => {
       el.addEventListener('change', async (e) => {
         const field = e.target.dataset.field;
+        const oldVal = b[field];
         let val = e.target.value;
         if (field === 'investitie' || field === 'valoare_port') val = parseFloat(val) || 0;
         b[field] = val;
         await sb.from('brokers').update({ [field]: val, updated_at: new Date().toISOString() }).eq('id', b.id);
         renderPortfolio();
+        if (field === 'investitie' || field === 'valoare_port') {
+          const label = field === 'investitie' ? 'Investitie' : 'Valoare port';
+          showUndoToast(`${b.name}: ${label} changed to ${fmt(val)}`, async () => {
+            b[field] = oldVal;
+            await sb.from('brokers').update({ [field]: oldVal, updated_at: new Date().toISOString() }).eq('id', b.id);
+            renderPortfolio();
+          });
+        }
       });
     });
     tr.querySelector('.icon-btn').addEventListener('click', async () => {
@@ -398,7 +426,7 @@ function renderPortfolio() {
   const totalPLEUR = totalValEUR - totalInvEUR;
   const totalRow = document.createElement('tr');
   totalRow.className = 'total-row';
-  totalRow.innerHTML = `<td colspan="4">Broker totals</td><td class="mono">${fmt(totalValEUR)}</td><td></td><td></td><td class="mono ${totalPLEUR>=0?'pos':'neg'}">${fmt(totalPLEUR)}</td><td></td>`;
+  totalRow.innerHTML = `<td colspan="4" data-label="">Broker totals</td><td class="mono" data-label="Eval (EUR)">${fmt(totalValEUR)}</td><td data-label=""></td><td data-label=""></td><td class="mono ${totalPLEUR>=0?'pos':'neg'}" data-label="P/L (EUR)">${fmt(totalPLEUR)}</td><td data-label=""></td>`;
   tbody.appendChild(totalRow);
 
   // Cash accounts
@@ -410,16 +438,16 @@ function renderPortfolio() {
     totalCashEUR += eur;
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><input class="name-input" data-field="name" value="${escapeHtml(c.name)}"/></td>
-      <td>
+      <td data-label="Account"><input class="name-input" data-field="name" value="${escapeHtml(c.name)}"/></td>
+      <td data-label="Ccy">
         <select data-field="currency" class="mono">
           <option value="RON" ${c.currency==='RON'?'selected':''}>RON</option>
           <option value="EUR" ${c.currency==='EUR'?'selected':''}>EUR</option>
         </select>
       </td>
-      <td><input type="number" step="0.01" class="mono" data-field="amount" value="${c.amount}"/></td>
-      <td class="mono muted-cell">${fmt(eur)}</td>
-      <td class="row-actions"><button class="icon-btn" title="Remove">✕</button></td>`;
+      <td data-label="Amount"><input type="number" step="0.01" class="mono" data-field="amount" value="${c.amount}"/></td>
+      <td class="mono muted-cell" data-label="Eval (EUR)">${fmt(eur)}</td>
+      <td class="row-actions" data-label=""><button class="icon-btn" title="Remove">✕</button></td>`;
     tr.querySelectorAll('input,select').forEach(el => {
       el.addEventListener('change', async (e) => {
         const field = e.target.dataset.field;
@@ -464,25 +492,25 @@ async function snapshotNetWorth(totalEUR) {
 
 function renderSpending() {
   const thead = document.getElementById('spending-thead-row');
-  thead.innerHTML = '<th>Category</th>' + MONTHS.map(m => `<th>${m}</th>`).join('') + '<th class="row-actions"></th>';
+  thead.innerHTML = '<th data-col="name">Category</th>' + MONTHS.map((m, i) => `<th data-col="${i+1}">${m}</th>`).join('') + '<th class="row-actions" data-col="actions"></th>';
 
   const tbody = document.getElementById('spending-tbody');
   tbody.innerHTML = '';
 
   state.categories.forEach(cat => {
     const tr = document.createElement('tr');
-    let cells = `<td><input class="name-input" data-cat="${cat.id}" data-field="catname" value="${escapeHtml(cat.name)}"/></td>`;
+    let cells = `<td data-col="name"><input class="name-input" data-cat="${cat.id}" data-field="catname" value="${escapeHtml(cat.name)}"/></td>`;
     for (let m = 1; m <= 12; m++) {
       const v = state.spending[cat.id]?.[m] || '';
       const hasNote = !!(state.notes[cat.id]?.[m]);
-      cells += `<td>
+      cells += `<td data-col="${m}">
         <div class="cell-wrap">
           <input type="number" step="0.01" class="mono" data-cat="${cat.id}" data-month="${m}" value="${v}" placeholder="—"/>
           <button type="button" class="note-icon ${hasNote ? 'has-note' : ''}" data-cat="${cat.id}" data-month="${m}" title="${hasNote ? 'View/edit note' : 'Add note'}">${hasNote ? '●' : '+'}</button>
         </div>
       </td>`;
     }
-    cells += `<td class="row-actions"><button class="icon-btn" title="Remove category">✕</button></td>`;
+    cells += `<td class="row-actions" data-col="actions"><button class="icon-btn" title="Remove category">✕</button></td>`;
     tr.innerHTML = cells;
 
     tr.querySelectorAll('.note-icon').forEach(btn => {
@@ -520,11 +548,26 @@ function renderSpending() {
   // Total row
   const totalRow = document.createElement('tr');
   totalRow.className = 'total-row';
-  let totalCells = '<td>Total discretionary</td>';
-  for (let m = 1; m <= 12; m++) totalCells += `<td class="mono">${fmt(categoryTotalForMonth(m))}</td>`;
-  totalCells += '<td></td>';
+  let totalCells = '<td data-col="name">Total discretionary</td>';
+  for (let m = 1; m <= 12; m++) totalCells += `<td class="mono" data-col="${m}">${fmt(categoryTotalForMonth(m))}</td>`;
+  totalCells += '<td data-col="actions"></td>';
   totalRow.innerHTML = totalCells;
   tbody.appendChild(totalRow);
+
+  applyMobileSpendingFilter();
+}
+
+// ---------------- Mobile spending month filter ----------------
+
+function applyMobileSpendingFilter() {
+  const isMobile = window.innerWidth <= 640;
+  document.querySelectorAll('#view-spending [data-col]').forEach(el => {
+    const col = el.dataset.col;
+    if (!isMobile || col === 'name' || col === 'actions') { el.style.display = ''; return; }
+    el.style.display = (parseInt(col) === state.mobileSpendMonth) ? '' : 'none';
+  });
+  const label = document.getElementById('mobile-month-label');
+  if (label) label.textContent = MONTHS[state.mobileSpendMonth - 1];
 }
 
 // ---------------- Dashboard ----------------
@@ -875,6 +918,18 @@ async function deleteAccount(msg) {
 
 document.getElementById('year-prev').addEventListener('click', async () => { state.year--; await loadIncome(); await loadCategoriesAndSpending(); renderAll(); });
 document.getElementById('year-next').addEventListener('click', async () => { state.year++; await loadIncome(); await loadCategoriesAndSpending(); renderAll(); });
+
+// ---------------- Mobile spending month navigation ----------------
+
+document.getElementById('mobile-month-prev').addEventListener('click', () => {
+  state.mobileSpendMonth = state.mobileSpendMonth === 1 ? 12 : state.mobileSpendMonth - 1;
+  applyMobileSpendingFilter();
+});
+document.getElementById('mobile-month-next').addEventListener('click', () => {
+  state.mobileSpendMonth = state.mobileSpendMonth === 12 ? 1 : state.mobileSpendMonth + 1;
+  applyMobileSpendingFilter();
+});
+window.addEventListener('resize', applyMobileSpendingFilter);
 
 // ---------------- Nav ----------------
 

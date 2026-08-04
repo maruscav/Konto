@@ -1,11 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
 :root {
-  --bg: #f4f5f8;
+  --bg: #f7f6f3;
   --surface: #ffffff;
-  --surface-2: #f0f1f6;
-  --line: #e6e8ef;
-  --text: #1b1e27;
+  --surface-2: #eeece9;
+  --line: #e2e0da;
+  --text: #16181d;
   --muted: #767c8c;
   --accent: #0f9d80;      /* teal-green primary */
   --accent-dim: #0b7d66;
@@ -14,11 +14,14 @@
   --loss: #e6584f;
   --loss-soft: #fdeceb;
   --profit-soft: #e7f7f0;
+  --highlight: #4f6bff;    /* used to make "valoare port" pop */
+  --highlight-soft: #ecefff;
+  --highlight-dim: #3d54d1;
   --radius: 10px;
   --radius-lg: 20px;
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
-  --shadow-card: 0 1px 2px rgba(20,24,38,0.04), 0 8px 24px -12px rgba(20,24,38,0.10);
-  --shadow-card-hover: 0 4px 10px rgba(20,24,38,0.06), 0 16px 32px -14px rgba(20,24,38,0.16);
+  --shadow-card: 0 1px 1px rgba(20,20,25,0.03), 0 2px 6px rgba(20,20,25,0.05), 0 14px 30px -16px rgba(20,20,25,0.18);
+  --shadow-card-hover: 0 4px 10px rgba(20,20,25,0.07), 0 22px 44px -18px rgba(20,20,25,0.24);
 }
 
 /* Category palette used for pills, dots, and charts */
@@ -210,6 +213,13 @@ table.ledger select {
 .neg { color: var(--loss); }
 .muted-cell { color: var(--muted); }
 
+/* "Valoare port" highlight — makes it visually distinct from investitie so it's
+   harder to type a value into the wrong field without noticing */
+table.ledger th.col-highlight { color: var(--highlight-dim); }
+table.ledger td.col-highlight { background: var(--highlight-soft); border-radius: 6px; }
+table.ledger td.col-highlight input { color: var(--highlight-dim); font-weight: 700; }
+table.ledger td.col-highlight input:focus { border-bottom-color: var(--highlight); }
+
 .row-actions { width: 28px; }
 .icon-btn {
   background: none; border: none; color: var(--muted); cursor: pointer;
@@ -244,11 +254,11 @@ table.ledger select {
 }
 .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-card-hover); }
 .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 700; margin-bottom: 8px; }
-.stat-value { font-family: 'IBM Plex Mono', monospace; font-size: 26px; font-weight: 700; letter-spacing: -0.01em; }
+.stat-value { font-family: 'IBM Plex Mono', monospace; font-size: 28px; font-weight: 800; letter-spacing: -0.01em; }
 
 /* ---------- Dashboard-specific ---------- */
 .hero-card {
-  background: linear-gradient(135deg, var(--accent) 0%, #0b6f5b 100%);
+  background: linear-gradient(135deg, var(--accent) 0%, #0a5c4b 100%);
   color: #fff;
   border-radius: var(--radius-lg);
   padding: 32px 34px;
@@ -261,7 +271,7 @@ table.ledger select {
   flex-wrap: wrap;
 }
 .hero-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.85; font-weight: 700; margin-bottom: 8px; }
-.hero-value { font-family: 'IBM Plex Mono', monospace; font-size: 40px; font-weight: 700; letter-spacing: -0.02em; }
+.hero-value { font-family: 'IBM Plex Mono', monospace; font-size: 46px; font-weight: 800; letter-spacing: -0.02em; }
 .hero-sub { font-size: 13px; opacity: 0.85; margin-top: 6px; }
 .hero-sparkline { width: 220px; height: 70px; flex-shrink: 0; }
 
@@ -407,6 +417,24 @@ table.ledger select {
 .note-popover .note-save { background: var(--accent); color: #fff; }
 .note-popover .note-close { background: none; color: var(--muted); }
 
+/* ---------- Undo toast ---------- */
+.undo-toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: var(--text); color: #fff; padding: 12px 18px; border-radius: 980px;
+  display: flex; align-items: center; gap: 14px; font-size: 13px; z-index: 2000;
+  box-shadow: var(--shadow-card-hover);
+  max-width: calc(100vw - 32px);
+}
+.undo-toast span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.undo-toast .undo-btn {
+  background: var(--accent); color: #fff; border: none; border-radius: 980px;
+  padding: 5px 12px; font-weight: 700; cursor: pointer; flex-shrink: 0;
+}
+
+/* ---------- Mobile month nav (spending view) ---------- */
+.mobile-month-nav { display: none; align-items: center; justify-content: center; gap: 16px; margin-bottom: 14px; }
+#mobile-month-label { font-size: 14px; font-weight: 700; min-width: 40px; text-align: center; }
+
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
 
@@ -428,4 +456,32 @@ table.ledger select {
   .chart-grid { grid-template-columns: 1fr; }
   .hero-card { flex-direction: column; align-items: flex-start; }
   .hero-sparkline { width: 100%; }
+}
+
+/* ---------- Mobile: brokers & cash tables become cards (no more sideways scroll) ---------- */
+@media (max-width: 640px) {
+  table.ledger.wide-8 thead, table.ledger.wide-cash thead { display: none; }
+  table.ledger.wide-8 tr, table.ledger.wide-cash tr {
+    display: block; border: 1px solid var(--line); border-radius: 14px;
+    margin-bottom: 10px; padding: 4px 14px; background: var(--surface);
+  }
+  table.ledger.wide-8 tr.total-row, table.ledger.wide-cash tr.total-row { border-color: var(--text); }
+  table.ledger.wide-8 td, table.ledger.wide-cash td {
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px dashed var(--line); padding: 9px 0; text-align: right;
+  }
+  table.ledger.wide-8 td:last-child, table.ledger.wide-cash td:last-child { border-bottom: none; }
+  table.ledger.wide-8 td::before, table.ledger.wide-cash td::before {
+    content: attr(data-label); color: var(--muted); font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.06em; text-align: left; font-weight: 700;
+  }
+  table.ledger.wide-8 td.col-highlight, table.ledger.wide-cash td.col-highlight {
+    margin: 0 -10px; padding: 9px 10px; border-radius: 8px; border-bottom: none;
+  }
+  table.ledger.wide-8 td.row-actions, table.ledger.wide-cash td.row-actions { justify-content: flex-end; }
+  table.ledger.wide-8 td.row-actions::before, table.ledger.wide-cash td.row-actions::before { content: none; }
+
+  /* Spending tracker: show one month at a time instead of a 12-col scroller */
+  .mobile-month-nav { display: flex; }
+  table.ledger.wide-months { min-width: 0; }
 }
