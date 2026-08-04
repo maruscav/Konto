@@ -484,6 +484,10 @@ table.ledger td.col-highlight input:focus { border-bottom-color: var(--highlight
      cells (Randament/P&L on the broker total row) — hide any cell that's truly empty */
   table.ledger.wide-8 td:empty, table.ledger.wide-cash td:empty { display: none; }
 
+  /* the desktop min-width was still forcing horizontal scroll even after rows
+     became cards — drop it so cards fill the actual screen width */
+  table.ledger.wide-8, table.ledger.wide-cash { min-width: 0; width: 100%; }
+
   /* Spending tracker: show one month at a time instead of a 12-col scroller */
   .mobile-month-nav { display: flex; }
   table.ledger.wide-months { min-width: 0; }
