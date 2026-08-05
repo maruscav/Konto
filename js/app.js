@@ -21,6 +21,9 @@ let charts = { incomeExpense: null, netWorth: null, categoryBreakdown: null, her
 let lastSnapshotValue = null;
 let openPopover = null;
 
+
+let pensionChart = null;
+
 const fmt = (n) => (Number(n) || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const uid = () => session?.user?.id;
 const escapeHtml = (str) => String(str ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
@@ -205,8 +208,13 @@ async function unlockWithBiometric() {
 // ---------------- Data load ----------------
 
 async function loadAll() {
-  await Promise.all([loadSettings(), loadBrokers(), loadCash(), loadIncome(), loadCategoriesAndSpending(), loadNetWorthSnapshots(), loadDashboardData()]);
+  await Promise.all([loadPension(), loadSettings(), loadBrokers(), loadCash(), loadIncome(), loadCategoriesAndSpending(), loadNetWorthSnapshots(), loadDashboardData()]);
   renderAll();
+}
+
+async function loadPension() {
+  const { data } = await sb.from('pension_entries').select('*').eq('user_id', uid()).order('transaction_date');
+  state.pension = data || [];
 }
 
 async function loadSettings() {
@@ -318,6 +326,7 @@ function renderAll() {
   renderCharts();
   renderDashboard();
   renderBiometricSettings();
+  renderPension();
 }
 
 function renderYearLabels() {
@@ -677,6 +686,80 @@ function renderHeroSparkline() {
   });
 }
 
+function renderPension() {
+  const tbody = document.getElementById('pension-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  // newest first for the table
+  const rows = [...state.pension].sort((a, b) => new Date(b.transaction_date) - new Date(a.transaction_date));
+
+  rows.forEach(p => {
+    const diff = Number(p.activ_personal) - Number(p.valoare_neta);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td data-label="Data"><input type="date" class="mono" data-field="transaction_date" value="${p.transaction_date}"/></td>
+      <td data-label="Valoare netă"><input type="number" step="0.01" class="mono" data-field="valoare_neta" value="${p.valoare_neta}"/></td>
+      <td data-label="Activ personal"><input type="number" step="0.01" class="mono" data-field="activ_personal" value="${p.activ_personal}"/></td>
+      <td class="mono ${diff >= 0 ? 'pos' : 'neg'}" data-label="Diferență">${fmt(diff)}</td>
+      <td class="row-actions" data-label=""><button class="icon-btn" title="Remove">✕</button></td>`;
+
+    tr.querySelectorAll('input').forEach(el => {
+      el.addEventListener('change', async (e) => {
+        const field = e.target.dataset.field;
+        let val = e.target.value;
+        if (field !== 'transaction_date') val = parseFloat(val) || 0;
+        const oldVal = p[field];
+        p[field] = val;
+        const { error } = await sb.from('pension_entries').update({ [field]: val, updated_at: new Date().toISOString() }).eq('id', p.id);
+        if (error) {
+          p[field] = oldVal; // revert local state
+          alert('Could not save — check for a duplicate date.');
+        }
+        renderPension();
+      });
+    });
+    tr.querySelector('.icon-btn').addEventListener('click', async () => {
+      await sb.from('pension_entries').delete().eq('id', p.id);
+      state.pension = state.pension.filter(x => x.id !== p.id);
+      renderPension();
+    });
+    tbody.appendChild(tr);
+  });
+
+  // stat cards use the most recent entry chronologically
+  const latest = rows[0];
+  if (latest) {
+    document.getElementById('pension-latest-neta').textContent = fmt(latest.valoare_neta);
+    document.getElementById('pension-latest-activ').textContent = fmt(latest.activ_personal);
+    const diffEl = document.getElementById('pension-latest-diff');
+    const diff = Number(latest.activ_personal) - Number(latest.valoare_neta);
+    diffEl.textContent = fmt(diff);
+    diffEl.className = 'stat-value mono ' + (diff >= 0 ? 'pos' : 'neg');
+  }
+
+  renderPensionChart();
+}
+
+function renderPensionChart() {
+  const ctx = document.getElementById('chart-pension');
+  if (!ctx) return;
+  const points = [...state.pension].sort((a, b) => new Date(a.transaction_date) - new Date(b.transaction_date));
+  if (pensionChart) pensionChart.destroy();
+  if (!points.length) { pensionChart = null; return; }
+  pensionChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: points.map(p => p.transaction_date),
+      datasets: [
+        { label: 'Valoare netă (RON)', data: points.map(p => Number(p.valoare_neta)), borderColor: '#4f7cff', backgroundColor: 'rgba(79,124,255,0.08)', fill: true, tension: 0.3, pointRadius: 2 },
+        { label: 'Activ personal (RON)', data: points.map(p => Number(p.activ_personal)), borderColor: '#0f9d80', backgroundColor: 'rgba(15,157,128,0.08)', fill: true, tension: 0.3, pointRadius: 2 }
+      ]
+    },
+    options: chartBaseOptions()
+  });
+}
+
 // ---------------- Charts ----------------
 
 const CHART_COLORS = ['#4f7cff', '#0f9d80', '#e6584f', '#f0a83c', '#9b6bf2', '#ec5fa3', '#2fb8c9', '#8a8f9c'];
@@ -941,7 +1024,14 @@ document.querySelectorAll('.nav-item').forEach(item => {
     document.getElementById(item.dataset.view).classList.add('active');
     if (item.dataset.view === 'view-summary') renderCharts();
     if (item.dataset.view === 'view-dashboard') { await loadDashboardData(); renderDashboard(); }
+    if (item.dataset.view === 'view-pension') renderPensionChart();
   });
 });
 
 initAuth();
+
+document.getElementById('add-pension-btn').addEventListener('click', async () => {
+  const today = new Date().toISOString().slice(0, 10);
+  const { data, error } = await sb.from('pension_entries').insert({ user_id: uid(), transaction_date: today, valoare_neta: 0, activ_personal: 0 }).select().single();
+  if (!error) { state.pension.push(data); renderPension(); }
+});
