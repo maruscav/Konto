@@ -229,6 +229,7 @@ table.ledger td.col-highlight input:focus { border-bottom-color: var(--highlight
 
 .add-row-btn {
   margin-top: 12px;
+  margin-bottom: 12px;
   background: none;
   border: 1px dashed var(--line);
   color: var(--muted);
