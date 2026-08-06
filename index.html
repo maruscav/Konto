@@ -252,6 +252,7 @@
       </div>
     </section>
     <!-- ---------- Pension view ---------- -->
+<!-- ---------- Pension view ---------- -->
 <section id="view-pension" class="view">
   <div class="view-header">
     <h1>Private pension</h1>
@@ -259,13 +260,14 @@
   </div>
 
   <div class="stat-row">
-    <div class="stat-card"><div class="stat-label">Valoare netă (latest)</div><div class="stat-value mono" id="pension-latest-neta">0.00</div></div>
-    <div class="stat-card"><div class="stat-label">Activ personal (latest)</div><div class="stat-value mono" id="pension-latest-activ">0.00</div></div>
-    <div class="stat-card"><div class="stat-label">Diferență</div><div class="stat-value mono" id="pension-latest-diff">0.00</div></div>
+    <div class="stat-card"><div class="stat-label">Net value (latest)</div><div class="stat-value mono" id="pension-latest-neta">0.00</div></div>
+    <div class="stat-card"><div class="stat-label">Personal assets (latest)</div><div class="stat-value mono" id="pension-latest-activ">0.00</div></div>
+    <div class="stat-card"><div class="stat-label">Difference</div><div class="stat-value mono" id="pension-latest-diff">0.00</div></div>
+    <div class="stat-card"><div class="stat-label">Difference %</div><div class="stat-value mono" id="pension-latest-diff-pct">0.00%</div></div>
   </div>
 
   <div class="card chart-card">
-    <p class="card-title">Valoare netă vs. Activ personal</p>
+    <p class="card-title">Net value vs. Personal assets</p>
     <div class="chart-wrap"><canvas id="chart-pension"></canvas></div>
   </div>
 
@@ -273,7 +275,7 @@
     <p class="card-title">Transaction history</p>
     <div class="table-scroll">
     <table class="ledger">
-      <thead><tr><th>Data tranzacției</th><th>Valoare netă (RON)</th><th>Activ personal (RON)</th><th>Diferență</th><th></th></tr></thead>
+      <thead><tr><th>Transaction date</th><th>Net value (RON)</th><th>Personal assets (RON)</th><th>Difference</th><th>Difference %</th><th></th></tr></thead>
       <tbody id="pension-tbody"></tbody>
     </table>
     </div>

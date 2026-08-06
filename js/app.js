@@ -691,17 +691,19 @@ function renderPension() {
   if (!tbody) return;
   tbody.innerHTML = '';
 
-  // newest first for the table
+  // newest first for the table — new entries land at the top automatically
   const rows = [...state.pension].sort((a, b) => new Date(b.transaction_date) - new Date(a.transaction_date));
 
   rows.forEach(p => {
     const diff = Number(p.activ_personal) - Number(p.valoare_neta);
+    const diffPct = Number(p.valoare_neta) ? (diff / Number(p.valoare_neta) * 100) : 0;
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td data-label="Data"><input type="date" class="mono" data-field="transaction_date" value="${p.transaction_date}"/></td>
-      <td data-label="Valoare netă"><input type="number" step="0.01" class="mono" data-field="valoare_neta" value="${p.valoare_neta}"/></td>
-      <td data-label="Activ personal"><input type="number" step="0.01" class="mono" data-field="activ_personal" value="${p.activ_personal}"/></td>
-      <td class="mono ${diff >= 0 ? 'pos' : 'neg'}" data-label="Diferență">${fmt(diff)}</td>
+      <td data-label="Transaction date"><input type="date" class="mono" data-field="transaction_date" value="${p.transaction_date}"/></td>
+      <td data-label="Net value"><input type="number" step="0.01" class="mono" data-field="valoare_neta" value="${p.valoare_neta}"/></td>
+      <td data-label="Personal assets"><input type="number" step="0.01" class="mono" data-field="activ_personal" value="${p.activ_personal}"/></td>
+      <td class="mono ${diff >= 0 ? 'pos' : 'neg'}" data-label="Difference">${fmt(diff)}</td>
+      <td class="mono ${diffPct >= 0 ? 'pos' : 'neg'}" data-label="Difference %">${diffPct.toFixed(2)}%</td>
       <td class="row-actions" data-label=""><button class="icon-btn" title="Remove">✕</button></td>`;
 
     tr.querySelectorAll('input').forEach(el => {
@@ -712,10 +714,7 @@ function renderPension() {
         const oldVal = p[field];
         p[field] = val;
         const { error } = await sb.from('pension_entries').update({ [field]: val, updated_at: new Date().toISOString() }).eq('id', p.id);
-        if (error) {
-          p[field] = oldVal; // revert local state
-          alert('Could not save — check for a duplicate date.');
-        }
+        if (error) { p[field] = oldVal; alert('Could not save — check for a duplicate date.'); }
         renderPension();
       });
     });
@@ -732,10 +731,16 @@ function renderPension() {
   if (latest) {
     document.getElementById('pension-latest-neta').textContent = fmt(latest.valoare_neta);
     document.getElementById('pension-latest-activ').textContent = fmt(latest.activ_personal);
-    const diffEl = document.getElementById('pension-latest-diff');
     const diff = Number(latest.activ_personal) - Number(latest.valoare_neta);
+    const diffPct = Number(latest.valoare_neta) ? (diff / Number(latest.valoare_neta) * 100) : 0;
+
+    const diffEl = document.getElementById('pension-latest-diff');
     diffEl.textContent = fmt(diff);
     diffEl.className = 'stat-value mono ' + (diff >= 0 ? 'pos' : 'neg');
+
+    const diffPctEl = document.getElementById('pension-latest-diff-pct');
+    diffPctEl.textContent = diffPct.toFixed(2) + '%';
+    diffPctEl.className = 'stat-value mono ' + (diffPct >= 0 ? 'pos' : 'neg');
   }
 
   renderPensionChart();
@@ -752,8 +757,8 @@ function renderPensionChart() {
     data: {
       labels: points.map(p => p.transaction_date),
       datasets: [
-        { label: 'Valoare netă (RON)', data: points.map(p => Number(p.valoare_neta)), borderColor: '#4f7cff', backgroundColor: 'rgba(79,124,255,0.08)', fill: true, tension: 0.3, pointRadius: 2 },
-        { label: 'Activ personal (RON)', data: points.map(p => Number(p.activ_personal)), borderColor: '#0f9d80', backgroundColor: 'rgba(15,157,128,0.08)', fill: true, tension: 0.3, pointRadius: 2 }
+        { label: 'Net value (RON)', data: points.map(p => Number(p.valoare_neta)), borderColor: '#4f7cff', backgroundColor: 'rgba(79,124,255,0.08)', fill: true, tension: 0.3, pointRadius: 2 },
+        { label: 'Personal assets (RON)', data: points.map(p => Number(p.activ_personal)), borderColor: '#0f9d80', backgroundColor: 'rgba(15,157,128,0.08)', fill: true, tension: 0.3, pointRadius: 2 }
       ]
     },
     options: chartBaseOptions()
