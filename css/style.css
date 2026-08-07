@@ -23,6 +23,26 @@
   --shadow-card: 0 1px 1px rgba(20,20,25,0.03), 0 2px 6px rgba(20,20,25,0.05), 0 14px 30px -16px rgba(20,20,25,0.18);
   --shadow-card-hover: 0 4px 10px rgba(20,20,25,0.07), 0 22px 44px -18px rgba(20,20,25,0.24);
 }
+:root[data-theme="dark"] {
+  --bg: #15171a;
+  --surface: #1e2024;
+  --surface-2: #262930;
+  --line: #34373d;
+  --text: #f1f2f4;
+  --muted: #9aa1ad;
+  --accent: #17b892;
+  --accent-dim: #3fd0ac;
+  --accent-soft: rgba(23,184,146,0.16);
+  --profit: #3fd0ac;
+  --loss: #ff8078;
+  --loss-soft: rgba(255,128,120,0.14);
+  --profit-soft: rgba(63,208,172,0.14);
+  --highlight: #8194ff;
+  --highlight-soft: rgba(129,148,255,0.16);
+  --highlight-dim: #aab5ff;
+  --shadow-card: 0 1px 1px rgba(0,0,0,0.25), 0 2px 8px rgba(0,0,0,0.3), 0 14px 30px -16px rgba(0,0,0,0.55);
+  --shadow-card-hover: 0 4px 14px rgba(0,0,0,0.35), 0 22px 44px -18px rgba(0,0,0,0.6);
+}
 
 /* Category palette used for pills, dots, and charts */
 :root {
@@ -40,6 +60,7 @@ html, body {
   font-size: 14px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  transition: background 0.25s cubic-bezier(0.4,0,0.2,1), color 0.25s cubic-bezier(0.4,0,0.2,1);
 }
 
 .mono { font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; }

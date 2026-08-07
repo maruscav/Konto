@@ -844,22 +844,59 @@ function renderCategoryBreakdownChart() {
     },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom', labels: { color: '#767c8c', font: { size: 11 }, boxWidth: 10, padding: 10 } } }
+      plugins: { legend: { position: 'bottom', labels: { color: chartTextColor(), font: { size: 11 }, boxWidth: 10, padding: 10 } } }
     }
   });
 }
 
 function chartBaseOptions() {
+  const textColor = chartTextColor();
+  const gridColor = chartGridColor();
   return {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend: { labels: { color: '#767c8c', font: { size: 11 }, boxWidth: 10 } } },
+    plugins: { legend: { labels: { color: textColor, font: { size: 11 }, boxWidth: 10 } } },
     scales: {
-      x: { ticks: { color: '#767c8c', font: { size: 10 } }, grid: { color: '#e6e8ef' } },
-      y: { ticks: { color: '#767c8c', font: { size: 10 } }, grid: { color: '#e6e8ef' } }
+      x: { ticks: { color: textColor, font: { size: 10 } }, grid: { color: gridColor } },
+      y: { ticks: { color: textColor, font: { size: 10 } }, grid: { color: gridColor } }
     }
   };
 }
+
+// ---------------- Theme ----------------
+
+function chartTextColor() {
+  return getComputedStyle(document.documentElement).getPropertyValue('--muted').trim() || '#767c8c';
+}
+function chartGridColor() {
+  return document.documentElement.getAttribute('data-theme') === 'dark' ? 'rgba(255,255,255,0.08)' : '#e6e8ef';
+}
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  document.querySelectorAll('.theme-toggle-btn').forEach(btn => {
+    btn.textContent = theme === 'dark' ? '☀️ Light mode' : '🌙 Dark mode';
+  });
+}
+
+function initTheme() {
+  const stored = localStorage.getItem('konto-theme');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  applyTheme(stored || (prefersDark ? 'dark' : 'light'));
+}
+
+function toggleTheme() {
+  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('konto-theme', next);
+  applyTheme(next);
+  // charts bake their colors in at render time — redraw so grid/legend match
+  renderCharts();
+  renderPensionChart();
+  renderHeroSparkline();
+}
+
+document.querySelectorAll('.theme-toggle-btn').forEach(btn => btn.addEventListener('click', toggleTheme));
+initTheme();
 
 // ---------------- Spending notes popover ----------------
 
