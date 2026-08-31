@@ -9,20 +9,22 @@ let state = {
   mobileSpendMonth: new Date().getMonth() + 1,
   brokers: [],
   cash: [],
-  income: {},        // { "1": 6622, "2": ... } month -> amount
-  categories: [],     // [{id, name, sort_order}]
-  spending: {},       // { categoryId: { "1": 250, "2": ... } }
-  notes: {},          // { categoryId: { "1": "note text", ... } }
-  netWorth: [],       // [{ snapshot_date, total_eur }, ...] ordered by date
-  webauthnCredentials: []  // [{ id, credential_id, label, created_at }]
+  income: {},
+  categories: [],
+  spending: {},
+  notes: {},
+  netWorth: [],
+  brokerSnapshots: [],
+  webauthnCredentials: []
 };
 
 let charts = { incomeExpense: null, netWorth: null, categoryBreakdown: null, heroSparkline: null };
 let lastSnapshotValue = null;
+let lastBrokerSnapshot = {};
 let openPopover = null;
 
-
 let pensionChart = null;
+let brokerHistoryChart = null;
 
 const fmt = (n) => (Number(n) || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const uid = () => session?.user?.id;
@@ -84,8 +86,6 @@ async function initAuth() {
   document.getElementById('register-biometric-btn').addEventListener('click', registerBiometric);
 }
 
-// After a valid Supabase session exists, decide whether a biometric
-// unlock is required before showing the app, or whether we can load straight in.
 async function proceedAfterAuth() {
   await loadWebauthnCredentials();
   const needsUnlock = state.webauthnCredentials.length > 0 && sessionStorage.getItem('biometric-verified') !== '1';
@@ -208,7 +208,7 @@ async function unlockWithBiometric() {
 // ---------------- Data load ----------------
 
 async function loadAll() {
-  await Promise.all([loadPension(), loadSettings(), loadBrokers(), loadCash(), loadIncome(), loadCategoriesAndSpending(), loadNetWorthSnapshots(), loadDashboardData()]);
+  await Promise.all([loadPension(), loadSettings(), loadBrokers(), loadCash(), loadIncome(), loadCategoriesAndSpending(), loadNetWorthSnapshots(), loadBrokerSnapshots(), loadDashboardData()]);
   renderAll();
 }
 
@@ -257,6 +257,11 @@ async function loadCategoriesAndSpending() {
 async function loadNetWorthSnapshots() {
   const { data } = await sb.from('net_worth_snapshots').select('*').eq('user_id', uid()).order('snapshot_date');
   state.netWorth = data || [];
+}
+
+async function loadBrokerSnapshots() {
+  const { data } = await sb.from('broker_snapshots').select('*').eq('user_id', uid()).order('snapshot_date');
+  state.brokerSnapshots = data || [];
 }
 
 async function loadDashboardData() {
@@ -438,7 +443,6 @@ function renderPortfolio() {
   totalRow.innerHTML = `<td colspan="4" data-label="">Broker totals</td><td class="mono" data-label="Eval (EUR)">${fmt(totalValEUR)}</td><td data-label=""></td><td data-label=""></td><td class="mono ${totalPLEUR>=0?'pos':'neg'}" data-label="P/L (EUR)">${fmt(totalPLEUR)}</td><td data-label=""></td>`;
   tbody.appendChild(totalRow);
 
-  // Cash accounts
   const cashBody = document.getElementById('cash-tbody');
   cashBody.innerHTML = '';
   let totalCashEUR = 0;
@@ -475,17 +479,16 @@ function renderPortfolio() {
     cashBody.appendChild(tr);
   });
 
-  // Grand totals
   const grandVal = totalValEUR + totalCashEUR;
   document.getElementById('grand-total-eur').textContent = fmt(grandVal);
   document.getElementById('grand-total-ron').textContent = fmt(grandVal * state.rate);
   document.getElementById('cash-total-eur').textContent = fmt(totalCashEUR);
   snapshotNetWorth(grandVal);
+  snapshotBrokerHistory();
   renderDashboard();
 }
 
 async function snapshotNetWorth(totalEUR) {
-  // Avoid spamming writes: only save if the value actually changed since our last write.
   if (lastSnapshotValue !== null && Math.abs(lastSnapshotValue - totalEUR) < 0.005) return;
   lastSnapshotValue = totalEUR;
   const today = new Date().toISOString().slice(0, 10);
@@ -499,7 +502,31 @@ async function snapshotNetWorth(totalEUR) {
   }
 }
 
+// One row per broker per day — only writes when investitie or valoare_port
+// actually changed since our last write, same "don't spam" guard as net worth.
+async function snapshotBrokerHistory() {
+  const today = new Date().toISOString().slice(0, 10);
+  for (const b of state.brokers) {
+    const key = `${b.investitie}|${b.valoare_port}|${b.currency}`;
+    if (lastBrokerSnapshot[b.id] === key) continue;
+    lastBrokerSnapshot[b.id] = key;
+    const { data } = await sb.from('broker_snapshots')
+      .upsert({
+        user_id: uid(), broker_id: b.id, snapshot_date: today,
+        currency: b.currency, investitie: b.investitie, valoare_port: b.valoare_port
+      }, { onConflict: 'user_id,broker_id,snapshot_date' })
+      .select().single();
+    if (data) {
+      const idx = state.brokerSnapshots.findIndex(s => s.broker_id === b.id && s.snapshot_date === today);
+      if (idx >= 0) state.brokerSnapshots[idx] = data; else state.brokerSnapshots.push(data);
+    }
+  }
+  renderBrokerHistoryChart();
+}
+
 function renderSpending() {
+  renderQuickAddCategories();
+
   const thead = document.getElementById('spending-thead-row');
   thead.innerHTML = '<th data-col="name">Category</th>' + MONTHS.map((m, i) => `<th data-col="${i+1}">${m}</th>`).join('') + '<th class="row-actions" data-col="actions"></th>';
 
@@ -554,7 +581,6 @@ function renderSpending() {
     tbody.appendChild(tr);
   });
 
-  // Total row
   const totalRow = document.createElement('tr');
   totalRow.className = 'total-row';
   let totalCells = '<td data-col="name">Total discretionary</td>';
@@ -565,6 +591,64 @@ function renderSpending() {
 
   applyMobileSpendingFilter();
 }
+
+// ---------------- Quick add spending ----------------
+
+function renderQuickAddCategories() {
+  const sel = document.getElementById('quick-add-category');
+  if (!sel) return;
+  const prevVal = sel.value;
+  sel.innerHTML = state.categories.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+  if (state.categories.some(c => c.id === prevVal)) sel.value = prevVal;
+}
+
+(function initQuickAddMonthSelect() {
+  const sel = document.getElementById('quick-add-month');
+  if (!sel) return;
+  const curMonth = new Date().getMonth() + 1;
+  sel.innerHTML = MONTHS.map((m, i) => `<option value="${i+1}" ${i+1===curMonth?'selected':''}>${m}</option>`).join('');
+})();
+
+document.getElementById('quick-add-btn')?.addEventListener('click', async () => {
+  const catSel = document.getElementById('quick-add-category');
+  const catId = catSel.value;
+  const catName = catSel.options[catSel.selectedIndex]?.text || 'category';
+  const month = parseInt(document.getElementById('quick-add-month').value);
+  const amountInput = document.getElementById('quick-add-amount');
+  const amount = parseFloat(amountInput.value);
+  const noteInput = document.getElementById('quick-add-note');
+  const noteText = noteInput.value.trim();
+  const hint = document.getElementById('quick-add-hint');
+
+  if (!catId) { hint.textContent = 'Add a category first (in the table below).'; return; }
+  if (!amount || amount <= 0) { hint.textContent = 'Enter an amount greater than 0.'; return; }
+
+  const existingAmount = state.spending[catId]?.[month] || 0;
+  const newAmount = existingAmount + amount;
+  const existingNote = state.notes[catId]?.[month] || '';
+  const addition = noteText ? `+${fmt(amount)} ${noteText}` : `+${fmt(amount)}`;
+  const newNote = existingNote ? `${existingNote}; ${addition}` : addition;
+
+  if (!state.spending[catId]) state.spending[catId] = {};
+  if (!state.notes[catId]) state.notes[catId] = {};
+  state.spending[catId][month] = newAmount;
+  state.notes[catId][month] = newNote;
+
+  await sb.from('spending_entries').upsert({
+    user_id: uid(), category_id: catId, year: state.year, month,
+    amount: newAmount, note: newNote, updated_at: new Date().toISOString()
+  }, { onConflict: 'user_id,category_id,year,month' });
+
+  hint.textContent = `Added ${fmt(amount)} to ${catName} (${MONTHS[month-1]}) — new total ${fmt(newAmount)}.`;
+  amountInput.value = '';
+  noteInput.value = '';
+  setTimeout(() => { hint.textContent = ''; }, 4000);
+
+  renderSpending();
+  renderSummary();
+  renderCharts();
+  renderDashboard();
+});
 
 // ---------------- Mobile spending month filter ----------------
 
@@ -691,7 +775,6 @@ function renderPension() {
   if (!tbody) return;
   tbody.innerHTML = '';
 
-  // newest first for the table — new entries land at the top automatically
   const rows = [...state.pension].sort((a, b) => new Date(b.transaction_date) - new Date(a.transaction_date));
 
   rows.forEach(p => {
@@ -726,7 +809,6 @@ function renderPension() {
     tbody.appendChild(tr);
   });
 
-  // stat cards use the most recent entry chronologically
   const latest = rows[0];
   if (latest) {
     document.getElementById('pension-latest-neta').textContent = fmt(latest.valoare_neta);
@@ -849,6 +931,34 @@ function renderCategoryBreakdownChart() {
   });
 }
 
+// Two lines per broker: dashed = investitie, solid = valoare port, both in EUR
+// at today's exchange rate (there's no historical FX rate stored, so past points
+// use the current rate too — a known approximation).
+function renderBrokerHistoryChart() {
+  const ctx = document.getElementById('chart-broker-history');
+  if (!ctx) return;
+  if (brokerHistoryChart) brokerHistoryChart.destroy();
+  if (!state.brokers.length || !state.brokerSnapshots.length) { brokerHistoryChart = null; return; }
+
+  const dates = [...new Set(state.brokerSnapshots.map(s => s.snapshot_date))].sort();
+
+  const datasets = [];
+  state.brokers.forEach((b, i) => {
+    const color = CHART_COLORS[i % CHART_COLORS.length];
+    const snaps = state.brokerSnapshots.filter(s => s.broker_id === b.id);
+    const investData = dates.map(d => { const s = snaps.find(x => x.snapshot_date === d); return s ? toEUR(s.investitie, s.currency) : null; });
+    const valData = dates.map(d => { const s = snaps.find(x => x.snapshot_date === d); return s ? toEUR(s.valoare_port, s.currency) : null; });
+    datasets.push({ label: `${b.name} — Investitie`, data: investData, borderColor: color, borderDash: [5, 4], backgroundColor: 'transparent', tension: 0.3, pointRadius: dates.length > 1 ? 1 : 4, spanGaps: true });
+    datasets.push({ label: `${b.name} — Valoare port`, data: valData, borderColor: color, backgroundColor: 'transparent', tension: 0.3, pointRadius: dates.length > 1 ? 1 : 4, spanGaps: true });
+  });
+
+  brokerHistoryChart = new Chart(ctx, {
+    type: 'line',
+    data: { labels: dates, datasets },
+    options: chartBaseOptions()
+  });
+}
+
 function chartBaseOptions() {
   const textColor = chartTextColor();
   const gridColor = chartGridColor();
@@ -889,10 +999,10 @@ function toggleTheme() {
   const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
   localStorage.setItem('konto-theme', next);
   applyTheme(next);
-  // charts bake their colors in at render time — redraw so grid/legend match
   renderCharts();
   renderPensionChart();
   renderHeroSparkline();
+  renderBrokerHistoryChart();
 }
 
 document.querySelectorAll('.theme-toggle-btn').forEach(btn => btn.addEventListener('click', toggleTheme));
@@ -1065,6 +1175,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
     item.classList.add('active');
     document.getElementById(item.dataset.view).classList.add('active');
     if (item.dataset.view === 'view-summary') renderCharts();
+    if (item.dataset.view === 'view-portfolio') renderBrokerHistoryChart();
     if (item.dataset.view === 'view-dashboard') { await loadDashboardData(); renderDashboard(); }
     if (item.dataset.view === 'view-pension') renderPensionChart();
   });

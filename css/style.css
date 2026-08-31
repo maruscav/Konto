@@ -263,6 +263,34 @@ table.ledger td.col-highlight input:focus { border-bottom-color: var(--highlight
 }
 .add-row-btn:hover { border-color: var(--accent); color: var(--accent-dim); }
 
+/* ---------- Quick add spending ---------- */
+.quick-add-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.quick-add-row select,
+.quick-add-row input[type="number"],
+.quick-add-row input[type="text"] {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 9px 11px;
+  font-size: 13px;
+}
+.quick-add-row select { font-family: 'Inter', sans-serif; }
+.quick-add-row input[type="number"] { font-family: 'IBM Plex Mono', monospace; width: 120px; }
+.quick-add-row input[type="text"] { flex: 1; min-width: 160px; font-family: 'Inter', sans-serif; }
+.quick-add-row select:focus, .quick-add-row input:focus { outline: none; border-color: var(--accent); }
+.quick-add-row .save-btn { flex-shrink: 0; }
+
+@media (max-width: 640px) {
+  .quick-add-row { flex-direction: column; align-items: stretch; }
+  .quick-add-row input[type="number"] { width: 100%; }
+}
+
 /* ---------- Summary/stat cards row ---------- */
 .stat-row { display: flex; gap: 16px; margin-bottom: 26px; flex-wrap: wrap; }
 .stat-card {
