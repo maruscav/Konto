@@ -172,6 +172,20 @@ main {
   align-items: center;
 }
 
+.card-title select {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+  padding: 5px 8px;
+}
+.card-title select:focus { outline: none; border-color: var(--accent); }
+
 .table-scroll {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;

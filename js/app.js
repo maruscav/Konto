@@ -22,7 +22,7 @@ let charts = { incomeExpense: null, netWorth: null, categoryBreakdown: null, her
 let lastSnapshotValue = null;
 let lastBrokerSnapshot = {};
 let openPopover = null;
-
+let selectedBrokerHistoryId = null;
 let pensionChart = null;
 let brokerHistoryChart = null;
 
@@ -381,6 +381,7 @@ function renderSummary() {
 }
 
 function renderPortfolio() {
+  renderBrokerHistorySelect();
   const tbody = document.getElementById('brokers-tbody');
   tbody.innerHTML = '';
   let totalInvEUR = 0, totalValEUR = 0;
@@ -934,22 +935,56 @@ function renderCategoryBreakdownChart() {
 // Two lines per broker: dashed = investitie, solid = valoare port, both in EUR
 // at today's exchange rate (there's no historical FX rate stored, so past points
 // use the current rate too — a known approximation).
+function renderBrokerHistorySelect() {
+  const sel = document.getElementById('broker-history-select');
+  if (!sel) return;
+  const prevVal = sel.value || selectedBrokerHistoryId;
+  const options = state.brokers.map(b => `<option value="${b.id}">${escapeHtml(b.name)}</option>`).join('');
+  sel.innerHTML = `<option value="all">All brokers</option>${options}`;
+  if (prevVal && (prevVal === 'all' || state.brokers.some(b => b.id === prevVal))) {
+    sel.value = prevVal;
+  } else if (state.brokers.length) {
+    sel.value = state.brokers[0].id;
+  }
+  selectedBrokerHistoryId = sel.value;
+}
+
+document.getElementById('broker-history-select')?.addEventListener('change', (e) => {
+  selectedBrokerHistoryId = e.target.value;
+  renderBrokerHistoryChart();
+});
+
+// Two lines per broker: dashed = investitie, solid = valoare port, both in EUR
+// at today's exchange rate (no historical FX rate is stored, so past points
+// use the current rate too — a known approximation). Shows only the broker
+// picked in the dropdown, or all of them if "All brokers" is selected.
 function renderBrokerHistoryChart() {
   const ctx = document.getElementById('chart-broker-history');
   if (!ctx) return;
   if (brokerHistoryChart) brokerHistoryChart.destroy();
   if (!state.brokers.length || !state.brokerSnapshots.length) { brokerHistoryChart = null; return; }
 
-  const dates = [...new Set(state.brokerSnapshots.map(s => s.snapshot_date))].sort();
+  const brokersToShow = selectedBrokerHistoryId && selectedBrokerHistoryId !== 'all'
+    ? state.brokers.filter(b => b.id === selectedBrokerHistoryId)
+    : state.brokers;
+
+  const dates = [...new Set(
+    state.brokerSnapshots
+      .filter(s => brokersToShow.some(b => b.id === s.broker_id))
+      .map(s => s.snapshot_date)
+  )].sort();
+
+  if (!dates.length) { brokerHistoryChart = null; return; }
 
   const datasets = [];
-  state.brokers.forEach((b, i) => {
+  brokersToShow.forEach((b, i) => {
     const color = CHART_COLORS[i % CHART_COLORS.length];
     const snaps = state.brokerSnapshots.filter(s => s.broker_id === b.id);
     const investData = dates.map(d => { const s = snaps.find(x => x.snapshot_date === d); return s ? toEUR(s.investitie, s.currency) : null; });
     const valData = dates.map(d => { const s = snaps.find(x => x.snapshot_date === d); return s ? toEUR(s.valoare_port, s.currency) : null; });
+    const singleBroker = brokersToShow.length === 1;
     datasets.push({ label: `${b.name} — Investitie`, data: investData, borderColor: color, borderDash: [5, 4], backgroundColor: 'transparent', tension: 0.3, pointRadius: dates.length > 1 ? 1 : 4, spanGaps: true });
-    datasets.push({ label: `${b.name} — Valoare port`, data: valData, borderColor: color, backgroundColor: 'transparent', tension: 0.3, pointRadius: dates.length > 1 ? 1 : 4, spanGaps: true });
+    datasets.push({ label: `${b.name} — Valoare port`, data: valData, borderColor: color, backgroundColor: singleBroker ? color + '1A' : 'transparent', fill: singleBroker, tension: 0.3, pointRadius: dates.length > 1 ? 2 : 4, spanGaps: true });
   });
 
   brokerHistoryChart = new Chart(ctx, {
