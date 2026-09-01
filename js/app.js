@@ -938,15 +938,19 @@ function renderCategoryBreakdownChart() {
 function renderBrokerHistorySelect() {
   const sel = document.getElementById('broker-history-select');
   if (!sel) return;
-  const prevVal = sel.value || selectedBrokerHistoryId;
-  const options = state.brokers.map(b => `<option value="${b.id}">${escapeHtml(b.name)}</option>`).join('');
-  sel.innerHTML = `<option value="all">All brokers</option>${options}`;
-  if (prevVal && (prevVal === 'all' || state.brokers.some(b => b.id === prevVal))) {
-    sel.value = prevVal;
-  } else if (state.brokers.length) {
-    sel.value = state.brokers[0].id;
-  }
-  selectedBrokerHistoryId = sel.value;
+
+  const validValues = ['all', ...state.brokers.map(b => b.id)];
+  const requested = sel.value || selectedBrokerHistoryId;
+  const chosen = validValues.includes(requested)
+    ? requested
+    : (state.brokers[0]?.id || 'all');
+
+  const optionsHtml = state.brokers.map(b =>
+    `<option value="${b.id}" ${b.id === chosen ? 'selected' : ''}>${escapeHtml(b.name)}</option>`
+  ).join('');
+  sel.innerHTML = `<option value="all" ${chosen === 'all' ? 'selected' : ''}>All brokers</option>${optionsHtml}`;
+
+  selectedBrokerHistoryId = chosen;
 }
 
 document.getElementById('broker-history-select')?.addEventListener('change', (e) => {

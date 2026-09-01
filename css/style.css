@@ -170,6 +170,8 @@ main {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
 }
 
 .card-title select {
@@ -183,6 +185,9 @@ main {
   text-transform: none;
   letter-spacing: normal;
   padding: 5px 8px;
+  flex-shrink: 0;
+  min-width: 140px;
+  max-width: 200px;
 }
 .card-title select:focus { outline: none; border-color: var(--accent); }
 
