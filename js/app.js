@@ -382,23 +382,17 @@ function renderSummary() {
 
 function renderPortfolio() {
   renderBrokerHistorySelect();
-  renderTransferBrokerSelects();
   const tbody = document.getElementById('brokers-tbody');
   tbody.innerHTML = '';
-  let totalInvEUR = 0, totalValEUR = 0, totalValueWithProfitEUR = 0;
+  let totalInvEUR = 0, totalValEUR = 0;
 
   state.brokers.forEach(b => {
-    const withdrawn = Number(b.withdrawn) || 0;
-    const investitie = Number(b.investitie);
-    const valoarePort = Number(b.valoare_port);
-    const allTimeGain = valoarePort + withdrawn - investitie;
-    const allTimeRandament = investitie ? (allTimeGain / investitie * 100) : 0;
-    const evalEUR = toEUR(valoarePort, b.currency);
-    const valueWithProfit = valoarePort + withdrawn;
-    const valueWithProfitEUR = toEUR(valueWithProfit, b.currency);
-    totalInvEUR += toEUR(investitie, b.currency);
+    const pl = Number(b.valoare_port) - Number(b.investitie);
+    const randament = Number(b.investitie) ? (pl / Number(b.investitie) * 100) : 0;
+    const evalEUR = toEUR(b.valoare_port, b.currency);
+    const plEUR = toEUR(pl, b.currency);
+    totalInvEUR += toEUR(b.investitie, b.currency);
     totalValEUR += evalEUR;
-    totalValueWithProfitEUR += valueWithProfitEUR;
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -410,10 +404,11 @@ function renderPortfolio() {
         </select>
       </td>
       <td data-label="Investitie"><input type="number" step="0.01" class="mono" data-field="investitie" value="${b.investitie}"/></td>
-      <td class="col-highlight" data-label="Amount"><input type="number" step="0.01" class="mono" data-field="valoare_port" value="${b.valoare_port}"/></td>
+      <td class="col-highlight" data-label="Valoare port"><input type="number" step="0.01" class="mono" data-field="valoare_port" value="${b.valoare_port}"/></td>
       <td class="mono muted-cell" data-label="Eval (EUR)">${fmt(evalEUR)}</td>
-      <td class="mono ${allTimeRandament >= 0 ? 'pos' : 'neg'}" data-label="Randament % (all-time)">${allTimeRandament.toFixed(2)}%</td>
-      <td class="mono muted-cell" data-label="Value w/ profit (EUR)">${fmt(valueWithProfitEUR)}</td>
+      <td class="mono ${randament >= 0 ? 'pos' : 'neg'}" data-label="Randament %">${randament.toFixed(2)}%</td>
+      <td class="mono ${pl >= 0 ? 'pos' : 'neg'}" data-label="P/L">${fmt(pl)}</td>
+      <td class="mono ${plEUR >= 0 ? 'pos' : 'neg'}" data-label="P/L (EUR)">${fmt(plEUR)}</td>
       <td class="row-actions" data-label=""><button class="icon-btn" title="Remove">✕</button></td>`;
 
     tr.querySelectorAll('input,select').forEach(el => {
@@ -426,7 +421,7 @@ function renderPortfolio() {
         await sb.from('brokers').update({ [field]: val, updated_at: new Date().toISOString() }).eq('id', b.id);
         renderPortfolio();
         if (field === 'investitie' || field === 'valoare_port') {
-          const label = field === 'investitie' ? 'Investitie' : 'Amount';
+          const label = field === 'investitie' ? 'Investitie' : 'Valoare port';
           showUndoToast(`${b.name}: ${label} changed to ${fmt(val)}`, async () => {
             b[field] = oldVal;
             await sb.from('brokers').update({ [field]: oldVal, updated_at: new Date().toISOString() }).eq('id', b.id);
@@ -446,7 +441,7 @@ function renderPortfolio() {
   const totalPLEUR = totalValEUR - totalInvEUR;
   const totalRow = document.createElement('tr');
   totalRow.className = 'total-row';
-  totalRow.innerHTML = `<td colspan="4" data-label="">Broker totals</td><td class="mono" data-label="Eval (EUR)">${fmt(totalValEUR)}</td><td data-label=""></td><td class="mono" data-label="Value w/ profit (EUR)">${fmt(totalValueWithProfitEUR)}</td><td data-label=""></td>`;
+  totalRow.innerHTML = `<td colspan="4" data-label="">Broker totals</td><td class="mono" data-label="Eval (EUR)">${fmt(totalValEUR)}</td><td data-label=""></td><td data-label=""></td><td class="mono ${totalPLEUR>=0?'pos':'neg'}" data-label="P/L (EUR)">${fmt(totalPLEUR)}</td><td data-label=""></td>`;
   tbody.appendChild(totalRow);
 
   const cashBody = document.getElementById('cash-tbody');
@@ -464,7 +459,7 @@ function renderPortfolio() {
           <option value="EUR" ${c.currency==='EUR'?'selected':''}>EUR</option>
         </select>
       </td>
-      <td class="col-highlight" data-label="Amount"><input type="number" step="0.01" class="mono" data-field="amount" value="${c.amount}"/></td>
+      <td data-label="Amount"><input type="number" step="0.01" class="mono" data-field="amount" value="${c.amount}"/></td>
       <td class="mono muted-cell" data-label="Eval (EUR)">${fmt(eur)}</td>
       <td class="row-actions" data-label=""><button class="icon-btn" title="Remove">✕</button></td>`;
     tr.querySelectorAll('input,select').forEach(el => {
@@ -1112,7 +1107,7 @@ function openNotePopover(anchor, catId, month) {
 // ---------------- Add row handlers ----------------
 
 document.getElementById('add-broker-btn').addEventListener('click', async () => {
-  const { data, error } = await sb.from('brokers').insert({ user_id: uid(), name: 'New broker', currency: 'RON', investitie: 0, valoare_port: 0, withdrawn: 0, sort_order: state.brokers.length }).select().single();
+  const { data, error } = await sb.from('brokers').insert({ user_id: uid(), name: 'New broker', currency: 'RON', investitie: 0, valoare_port: 0, sort_order: state.brokers.length }).select().single();
   if (!error) { state.brokers.push(data); renderPortfolio(); }
 });
 
@@ -1231,64 +1226,4 @@ document.getElementById('add-pension-btn').addEventListener('click', async () =>
   const today = new Date().toISOString().slice(0, 10);
   const { data, error } = await sb.from('pension_entries').insert({ user_id: uid(), transaction_date: today, valoare_neta: 0, activ_personal: 0 }).select().single();
   if (!error) { state.pension.push(data); renderPension(); }
-});
-
-document.getElementById('broker-transfer-btn')?.addEventListener('click', async () => {
-  const fromSel = document.getElementById('transfer-from-broker');
-  const toSel = document.getElementById('transfer-to-broker');
-  const fromId = fromSel.value;
-  const toId = toSel.value;
-  const amountInput = document.getElementById('transfer-amount');
-  const amount = parseFloat(amountInput.value);
-  const movePrincipal = document.getElementById('transfer-move-principal').checked;
-  const hint = document.getElementById('transfer-hint');
-
-  if (!fromId || !toId || fromId === toId) { hint.textContent = 'Pick two different brokers.'; return; }
-  if (!amount || amount <= 0) { hint.textContent = 'Enter an amount greater than 0.'; return; }
-
-  const fromBroker = state.brokers.find(b => b.id === fromId);
-  const toBroker = state.brokers.find(b => b.id === toId);
-  if (!fromBroker || !toBroker) return;
-
-  const amountInFromCcy = fromBroker.currency === 'EUR' ? amount : amount * state.rate;
-  const amountInToCcy = toBroker.currency === 'EUR' ? amount : amount * state.rate;
-
-  const oldFrom = { valoare_port: fromBroker.valoare_port, investitie: fromBroker.investitie, withdrawn: fromBroker.withdrawn };
-  const oldTo = { valoare_port: toBroker.valoare_port, investitie: toBroker.investitie };
-
-  fromBroker.valoare_port = Number(fromBroker.valoare_port) - amountInFromCcy;
-  if (movePrincipal) {
-    // Returning original capital — reduce what was ever put in, not "profit made".
-    fromBroker.investitie = Number(fromBroker.investitie) - amountInFromCcy;
-  } else {
-    // Reinvesting profit — the gain stays "earned here" for all-time randament,
-    // it's just no longer sitting here right now.
-    fromBroker.withdrawn = Number(fromBroker.withdrawn || 0) + amountInFromCcy;
-  }
-  toBroker.valoare_port = Number(toBroker.valoare_port) + amountInToCcy;
-  toBroker.investitie = Number(toBroker.investitie) + amountInToCcy;
-
-  async function persist(fb, tb) {
-    await Promise.all([
-      sb.from('brokers').update({ valoare_port: fb.valoare_port, investitie: fb.investitie, withdrawn: fb.withdrawn, updated_at: new Date().toISOString() }).eq('id', fromBroker.id),
-      sb.from('brokers').update({ valoare_port: tb.valoare_port, investitie: tb.investitie, updated_at: new Date().toISOString() }).eq('id', toBroker.id)
-    ]);
-  }
-  await persist(fromBroker, toBroker);
-
-  hint.textContent = `Moved ${fmt(amount)} EUR: ${fromBroker.name} → ${toBroker.name}.`;
-  amountInput.value = '';
-  setTimeout(() => { hint.textContent = ''; }, 4000);
-
-  renderPortfolio();
-
-  showUndoToast(`Transfer ${fmt(amount)} EUR ${fromBroker.name} → ${toBroker.name}`, async () => {
-    fromBroker.valoare_port = oldFrom.valoare_port;
-    fromBroker.investitie = oldFrom.investitie;
-    fromBroker.withdrawn = oldFrom.withdrawn;
-    toBroker.valoare_port = oldTo.valoare_port;
-    toBroker.investitie = oldTo.investitie;
-    await persist(fromBroker, toBroker);
-    renderPortfolio();
-  });
 });
