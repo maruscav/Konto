@@ -158,8 +158,8 @@
         <div class="table-scroll">
         <table class="ledger wide-8">
           <thead><tr>
-            <th>Broker</th><th>Ccy</th><th>Investitie</th><th class="col-highlight">Valoare port</th>
-            <th>Eval (EUR)</th><th>Randament %</th><th>P/L</th><th>P/L (EUR)</th><th></th>
+            <th>Broker</th><th>Ccy</th><th>Investitie</th><th class="col-highlight">Amount</th>
+            <th>Eval (EUR)</th><th>Randament % (all-time)</th><th>Value w/ profit (EUR)</th><th></th>
           </tr></thead>
           <tbody id="brokers-tbody"></tbody>
         </table>
@@ -171,12 +171,13 @@
         <p class="card-title">Cash & bank accounts</p>
         <div class="table-scroll">
         <table class="ledger wide-cash">
-          <thead><tr><th>Account</th><th>Ccy</th><th>Amount</th><th>Eval (EUR)</th><th></th></tr></thead>
+          <thead><tr><th>Account</th><th>Ccy</th><th class="col-highlight">Amount</th><th>Eval (EUR)</th><th></th></tr></thead>
           <tbody id="cash-tbody"></tbody>
         </table>
         </div>
         <button class="add-row-btn" id="add-cash-btn">+ Add account</button>
       </div>
+
       <div class="card chart-card">
         <p class="card-title">
           <span>Broker history (EUR)</span>
