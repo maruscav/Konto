@@ -759,8 +759,9 @@ function renderHeroSparkline() {
       labels: points.map(p => p.snapshot_date),
       datasets: [{
         data: points.map(p => Number(p.total_eur)),
-        borderColor: '#ffffff', backgroundColor: 'rgba(255,255,255,0.2)',
-        fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2
+        borderColor: getComputedStyle(document.documentElement).getPropertyValue('--profit').trim() || '#34c778',
+        backgroundColor: 'transparent',
+        fill: false, tension: 0.3, pointRadius: 0, borderWidth: 2
       }]
     },
     options: {
@@ -840,8 +841,8 @@ function renderPensionChart() {
     data: {
       labels: points.map(p => p.transaction_date),
       datasets: [
-        { label: 'Net value (RON)', data: points.map(p => Number(p.valoare_neta)), borderColor: '#4f7cff', backgroundColor: 'rgba(79,124,255,0.08)', fill: true, tension: 0.3, pointRadius: 2 },
-        { label: 'Personal assets (RON)', data: points.map(p => Number(p.activ_personal)), borderColor: '#0f9d80', backgroundColor: 'rgba(15,157,128,0.08)', fill: true, tension: 0.3, pointRadius: 2 }
+        { label: 'Net value (RON)', data: points.map(p => Number(p.valoare_neta)), borderColor: '#4c86ff', backgroundColor: 'rgba(76,134,255,0.08)', fill: true, tension: 0.3, pointRadius: 2 },
+        { label: 'Personal assets (RON)', data: points.map(p => Number(p.activ_personal)), borderColor: '#34c778', backgroundColor: 'rgba(52,199,120,0.08)', fill: true, tension: 0.3, pointRadius: 2 }
       ]
     },
     options: chartBaseOptions()
@@ -850,7 +851,7 @@ function renderPensionChart() {
 
 // ---------------- Charts ----------------
 
-const CHART_COLORS = ['#4f7cff', '#0f9d80', '#e6584f', '#f0a83c', '#9b6bf2', '#ec5fa3', '#2fb8c9', '#8a8f9c'];
+const CHART_COLORS = ['#4c86ff', '#1fa15a', '#ff5c5c', '#f0a83c', '#9c6bf2', '#ec5fa3', '#2fb8c9', '#8a8f9c'];
 
 function colorForCategory(catId) {
   let hash = 0;
@@ -875,8 +876,8 @@ function renderIncomeExpenseChart() {
     data: {
       labels: MONTHS,
       datasets: [
-        { label: 'Income', data: income, backgroundColor: '#0f9d80', borderRadius: 4, maxBarThickness: 18 },
-        { label: 'Expenses', data: expenses, backgroundColor: '#e6584f', borderRadius: 4, maxBarThickness: 18 }
+        { label: 'Income', data: income, backgroundColor: '#1fa15a', borderRadius: 4, maxBarThickness: 18 },
+        { label: 'Expenses', data: expenses, backgroundColor: '#ff5c5c', borderRadius: 4, maxBarThickness: 18 }
       ]
     },
     options: chartBaseOptions()
@@ -900,12 +901,12 @@ function renderNetWorthChart() {
       datasets: [{
         label: 'Net worth (EUR)',
         data: points.map(p => Number(p.total_eur)),
-        borderColor: '#0f9d80',
-        backgroundColor: 'rgba(15,157,128,0.10)',
+        borderColor: '#4c86ff',
+        backgroundColor: 'rgba(76,134,255,0.10)',
         fill: true,
         tension: 0.3,
         pointRadius: points.length > 1 ? 2 : 4,
-        pointBackgroundColor: '#0f9d80'
+        pointBackgroundColor: '#4c86ff'
       }]
     },
     options: chartBaseOptions()
@@ -923,7 +924,7 @@ function renderCategoryBreakdownChart() {
     type: 'doughnut',
     data: {
       labels,
-      datasets: [{ data, backgroundColor: colors, borderColor: '#ffffff', borderWidth: 2 }]
+      datasets: [{ data, backgroundColor: colors, borderColor: getComputedStyle(document.documentElement).getPropertyValue('--surface').trim() || '#12161f', borderWidth: 2 }]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
@@ -1018,7 +1019,7 @@ function chartTextColor() {
   return getComputedStyle(document.documentElement).getPropertyValue('--muted').trim() || '#767c8c';
 }
 function chartGridColor() {
-  return document.documentElement.getAttribute('data-theme') === 'dark' ? 'rgba(255,255,255,0.08)' : '#e6e8ef';
+  return document.documentElement.getAttribute('data-theme') === 'dark' ? 'rgba(255,255,255,0.06)' : '#e6e8ef';
 }
 
 function applyTheme(theme) {
@@ -1030,8 +1031,9 @@ function applyTheme(theme) {
 
 function initTheme() {
   const stored = localStorage.getItem('konto-theme');
-  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  applyTheme(stored || (prefersDark ? 'dark' : 'light'));
+  // Copilot-style dark surface is the default look; only fall back to light
+  // once someone has explicitly chosen it via the toggle.
+  applyTheme(stored || 'dark');
 }
 
 function toggleTheme() {

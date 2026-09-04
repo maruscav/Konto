@@ -1,53 +1,58 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
+/* ============================================================
+   Palette — Copilot-style: dark navy surfaces, one confident
+   blue for interactive/primary moments, green/red reserved
+   strictly for gains/losses so they stay meaningful.
+   ============================================================ */
 :root {
-  --bg: #f7f6f3;
+  --bg: #f5f6f8;
   --surface: #ffffff;
-  --surface-2: #eeece9;
-  --line: #e2e0da;
-  --text: #16181d;
-  --muted: #767c8c;
-  --accent: #0f9d80;      /* teal-green primary */
-  --accent-dim: #0b7d66;
-  --accent-soft: #e3f5f0;
-  --profit: #1a9f6b;
-  --loss: #e6584f;
+  --surface-2: #f0f1f4;
+  --line: #e3e5ea;
+  --text: #10141c;
+  --muted: #6b7280;
+  --accent: #3e7bfa;       /* Copilot blue — primary / active state */
+  --accent-dim: #2f63d1;
+  --accent-soft: #e8f0ff;
+  --profit: #1fa15a;
+  --loss: #e5484d;
   --loss-soft: #fdeceb;
-  --profit-soft: #e7f7f0;
-  --highlight: #4f6bff;    /* used to make "valoare port" pop */
-  --highlight-soft: #ecefff;
-  --highlight-dim: #3d54d1;
-  --radius: 10px;
+  --profit-soft: #e6f7ee;
+  --highlight: #7c6cf0;    /* indigo — used to make "valoare port" pop */
+  --highlight-soft: #eeecfd;
+  --highlight-dim: #6552d6;
+  --radius: 12px;
   --radius-lg: 20px;
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
-  --shadow-card: 0 1px 1px rgba(20,20,25,0.03), 0 2px 6px rgba(20,20,25,0.05), 0 14px 30px -16px rgba(20,20,25,0.18);
-  --shadow-card-hover: 0 4px 10px rgba(20,20,25,0.07), 0 22px 44px -18px rgba(20,20,25,0.24);
+  --shadow-card: 0 1px 2px rgba(16,20,28,0.04), 0 10px 24px -16px rgba(16,20,28,0.14);
+  --shadow-card-hover: 0 4px 10px rgba(16,20,28,0.06), 0 20px 40px -18px rgba(16,20,28,0.2);
 }
 :root[data-theme="dark"] {
-  --bg: #15171a;
-  --surface: #1e2024;
-  --surface-2: #262930;
-  --line: #34373d;
-  --text: #f1f2f4;
-  --muted: #9aa1ad;
-  --accent: #17b892;
-  --accent-dim: #3fd0ac;
-  --accent-soft: rgba(23,184,146,0.16);
-  --profit: #3fd0ac;
-  --loss: #ff8078;
-  --loss-soft: rgba(255,128,120,0.14);
-  --profit-soft: rgba(63,208,172,0.14);
-  --highlight: #8194ff;
-  --highlight-soft: rgba(129,148,255,0.16);
-  --highlight-dim: #aab5ff;
-  --shadow-card: 0 1px 1px rgba(0,0,0,0.25), 0 2px 8px rgba(0,0,0,0.3), 0 14px 30px -16px rgba(0,0,0,0.55);
-  --shadow-card-hover: 0 4px 14px rgba(0,0,0,0.35), 0 22px 44px -18px rgba(0,0,0,0.6);
+  --bg: #0a0d13;
+  --surface: #12161f;
+  --surface-2: #1a1f2a;
+  --line: #232837;
+  --text: #eef1f6;
+  --muted: #7d879b;
+  --accent: #4c86ff;
+  --accent-dim: #7ea6ff;
+  --accent-soft: rgba(76,134,255,0.14);
+  --profit: #34c778;
+  --loss: #ff5c5c;
+  --loss-soft: rgba(255,92,92,0.13);
+  --profit-soft: rgba(52,199,120,0.13);
+  --highlight: #9c8cff;
+  --highlight-soft: rgba(156,140,255,0.16);
+  --highlight-dim: #b4a8ff;
+  --shadow-card: 0 1px 1px rgba(0,0,0,0.2), 0 1px 0 rgba(255,255,255,0.02) inset;
+  --shadow-card-hover: 0 0 0 1px rgba(255,255,255,0.04) inset, 0 20px 40px -18px rgba(0,0,0,0.55);
 }
 
 /* Category palette used for pills, dots, and charts */
 :root {
-  --cat-0: #4f7cff; --cat-1: #0f9d80; --cat-2: #e6584f; --cat-3: #f0a83c;
-  --cat-4: #9b6bf2; --cat-5: #ec5fa3; --cat-6: #2fb8c9; --cat-7: #8a8f9c;
+  --cat-0: #4c86ff; --cat-1: #1fa15a; --cat-2: #ff5c5c; --cat-3: #f0a83c;
+  --cat-4: #9c6bf2; --cat-5: #ec5fa3; --cat-6: #2fb8c9; --cat-7: #8a8f9c;
 }
 
 * { box-sizing: border-box; }
@@ -90,7 +95,7 @@ html, body {
 
 .brand-sub {
   font-size: 11px;
-  color: var(--accent-dim);
+  color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.14em;
   font-weight: 600;
@@ -142,7 +147,7 @@ main {
 .view-header h1 {
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif;
   font-weight: 800;
-  font-size: 34px;
+  font-size: 32px;
   letter-spacing: -0.03em;
   margin: 0 0 6px 0;
   color: var(--text);
@@ -154,17 +159,17 @@ main {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  padding: 28px 30px;
-  margin-bottom: 26px;
+  padding: 26px 28px;
+  margin-bottom: 22px;
   box-shadow: var(--shadow-card);
-  transition: box-shadow 0.25s var(--ease), transform 0.25s var(--ease);
+  transition: box-shadow 0.25s var(--ease), border-color 0.25s var(--ease);
 }
+.card:hover { border-color: color-mix(in srgb, var(--line) 60%, var(--muted)); }
 
 .card-title {
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.09em;
-  color: var(--muted);
+  font-size: 13px;
+  letter-spacing: -0.005em;
+  color: var(--text);
   font-weight: 700;
   margin: 0 0 18px 0;
   display: flex;
@@ -223,7 +228,7 @@ table.ledger td {
 }
 table.ledger tr:last-child td { border-bottom: none; }
 table.ledger tr.total-row td {
-  border-top: 2px solid var(--text);
+  border-top: 2px solid var(--line);
   border-bottom: none;
   font-weight: 700;
   padding-top: 12px;
@@ -311,7 +316,7 @@ table.ledger td.col-highlight input:focus { border-bottom-color: var(--highlight
 }
 
 /* ---------- Summary/stat cards row ---------- */
-.stat-row { display: flex; gap: 16px; margin-bottom: 26px; flex-wrap: wrap; }
+.stat-row { display: flex; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
 .stat-card {
   flex: 1; min-width: 180px;
   background: var(--surface);
@@ -319,42 +324,46 @@ table.ledger td.col-highlight input:focus { border-bottom-color: var(--highlight
   border-radius: var(--radius-lg);
   padding: 20px 22px;
   box-shadow: var(--shadow-card);
-  transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease);
+  transition: transform 0.2s var(--ease), border-color 0.2s var(--ease);
 }
-.stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-card-hover); }
-.stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 700; margin-bottom: 8px; }
-.stat-value { font-family: 'IBM Plex Mono', monospace; font-size: 28px; font-weight: 800; letter-spacing: -0.01em; }
+.stat-card:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--line) 60%, var(--muted)); }
+.stat-label { font-size: 12px; color: var(--muted); font-weight: 600; margin-bottom: 8px; }
+.stat-value { font-size: 27px; font-weight: 700; letter-spacing: -0.02em; }
+/* Numeric grids stay tabular mono; standalone stat/hero figures read as a
+   confident rounded sans, closer to Copilot's headline numbers. */
+.stat-value.mono, .hero-value.mono { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif; }
 
 /* ---------- Dashboard-specific ---------- */
 .hero-card {
-  background: linear-gradient(135deg, var(--accent) 0%, #0a5c4b 100%);
-  color: #fff;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  padding: 32px 34px;
-  margin-bottom: 26px;
-  box-shadow: 0 16px 40px -16px rgba(15,157,128,0.45);
+  padding: 28px 30px;
+  margin-bottom: 22px;
+  box-shadow: var(--shadow-card);
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 24px;
   flex-wrap: wrap;
 }
-.hero-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.85; font-weight: 700; margin-bottom: 8px; }
-.hero-value { font-family: 'IBM Plex Mono', monospace; font-size: 46px; font-weight: 800; letter-spacing: -0.02em; }
-.hero-sub { font-size: 13px; opacity: 0.85; margin-top: 6px; }
+.hero-label { font-size: 12px; color: var(--muted); font-weight: 600; margin-bottom: 8px; }
+.hero-value { font-size: 42px; font-weight: 700; letter-spacing: -0.02em; }
+.hero-sub { font-size: 13px; color: var(--muted); margin-top: 6px; }
 .hero-sparkline { width: 220px; height: 70px; flex-shrink: 0; }
 
 .dashboard-grid {
   display: grid;
   grid-template-columns: 1.1fr 1fr;
-  gap: 22px;
+  gap: 20px;
   align-items: start;
 }
 @media (max-width: 980px) { .dashboard-grid { grid-template-columns: 1fr; } }
 
 .cat-pill {
   display: inline-flex; align-items: center; gap: 6px;
-  font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 980px;
+  font-size: 11.5px; font-weight: 700; padding: 4px 10px; border-radius: 980px;
 }
 .cat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 
@@ -489,7 +498,8 @@ table.ledger td.col-highlight input:focus { border-bottom-color: var(--highlight
 /* ---------- Undo toast ---------- */
 .undo-toast {
   position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-  background: var(--text); color: #fff; padding: 12px 18px; border-radius: 980px;
+  background: var(--surface); color: var(--text); border: 1px solid var(--line);
+  padding: 12px 18px; border-radius: 980px;
   display: flex; align-items: center; gap: 14px; font-size: 13px; z-index: 2000;
   box-shadow: var(--shadow-card-hover);
   max-width: calc(100vw - 32px);
@@ -534,7 +544,7 @@ table.ledger td.col-highlight input:focus { border-bottom-color: var(--highlight
     display: block; border: 1px solid var(--line); border-radius: 14px;
     margin-bottom: 10px; padding: 4px 14px; background: var(--surface);
   }
-  table.ledger.wide-8 tr.total-row, table.ledger.wide-cash tr.total-row { border-color: var(--text); }
+  table.ledger.wide-8 tr.total-row, table.ledger.wide-cash tr.total-row { border-color: var(--muted); }
   table.ledger.wide-8 td, table.ledger.wide-cash td {
     display: flex; justify-content: space-between; align-items: center;
     border-bottom: 1px dashed var(--line); padding: 9px 0; text-align: right;
