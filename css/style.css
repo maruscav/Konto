@@ -1,64 +1,85 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
 
 /* ============================================================
-   Palette — Copilot-style: dark navy surfaces, one confident
-   blue for interactive/primary moments, green/red reserved
-   strictly for gains/losses so they stay meaningful.
+   Palette — "aurora ledger": a near-black canvas with a soft
+   violet -> magenta glow mesh behind the glass cards. The glow
+   is the one signature move (hero number, primary chart fills,
+   active nav) — everything else stays quiet so it reads.
+   Green/red are reserved strictly for gains/losses.
    ============================================================ */
 :root {
-  --bg: #f5f6f8;
-  --surface: #ffffff;
-  --surface-2: #f0f1f4;
-  --line: #e3e5ea;
-  --text: #10141c;
-  --muted: #6b7280;
-  --accent: #3e7bfa;       /* Copilot blue — primary / active state */
-  --accent-dim: #2f63d1;
-  --accent-soft: #e8f0ff;
-  --profit: #1fa15a;
-  --loss: #e5484d;
-  --loss-soft: #fdeceb;
-  --profit-soft: #e6f7ee;
-  --highlight: #7c6cf0;    /* indigo — used to make "valoare port" pop */
-  --highlight-soft: #eeecfd;
-  --highlight-dim: #6552d6;
-  --radius: 12px;
-  --radius-lg: 20px;
+  --bg: #f3f2f8;
+  --bg-glow-1: rgba(139,92,246,0.10);
+  --bg-glow-2: rgba(236,72,153,0.08);
+  --bg-glow-3: rgba(56,189,248,0.06);
+  --surface: rgba(255,255,255,0.86);
+  --surface-2: #ecebf3;
+  --surface-solid: #ffffff;
+  --line: #e2dff0;
+  --text: #14121f;
+  --muted: #6b6780;
+  --accent: #7c3aed;
+  --accent-dim: #6d28d9;
+  --accent-soft: #efe8fe;
+  --violet: #8b5cf6;
+  --magenta: #ec4899;
+  --cyan: #22d3ee;
+  --profit: #16a34a;
+  --loss: #e11d48;
+  --loss-soft: #fde2e7;
+  --profit-soft: #e3f7ea;
+  --highlight: #7c3aed;
+  --highlight-soft: #efe8fe;
+  --highlight-dim: #6d28d9;
+  --radius: 14px;
+  --radius-lg: 22px;
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
-  --shadow-card: 0 1px 2px rgba(16,20,28,0.04), 0 10px 24px -16px rgba(16,20,28,0.14);
-  --shadow-card-hover: 0 4px 10px rgba(16,20,28,0.06), 0 20px 40px -18px rgba(16,20,28,0.2);
+  --shadow-card: 0 1px 2px rgba(20,18,31,0.04), 0 14px 30px -18px rgba(20,18,31,0.16);
+  --shadow-card-hover: 0 4px 10px rgba(20,18,31,0.06), 0 24px 44px -18px rgba(20,18,31,0.22);
+  --shadow-glow: 0 0 0 1px rgba(139,92,246,0.10), 0 20px 60px -22px rgba(139,92,246,0.35);
 }
 :root[data-theme="dark"] {
-  --bg: #0a0d13;
-  --surface: #12161f;
-  --surface-2: #1a1f2a;
-  --line: #232837;
-  --text: #eef1f6;
-  --muted: #7d879b;
-  --accent: #4c86ff;
-  --accent-dim: #7ea6ff;
-  --accent-soft: rgba(76,134,255,0.14);
-  --profit: #34c778;
-  --loss: #ff5c5c;
-  --loss-soft: rgba(255,92,92,0.13);
-  --profit-soft: rgba(52,199,120,0.13);
-  --highlight: #9c8cff;
-  --highlight-soft: rgba(156,140,255,0.16);
-  --highlight-dim: #b4a8ff;
-  --shadow-card: 0 1px 1px rgba(0,0,0,0.2), 0 1px 0 rgba(255,255,255,0.02) inset;
-  --shadow-card-hover: 0 0 0 1px rgba(255,255,255,0.04) inset, 0 20px 40px -18px rgba(0,0,0,0.55);
+  --bg: #07070c;
+  --bg-glow-1: rgba(139,92,246,0.22);
+  --bg-glow-2: rgba(236,72,153,0.14);
+  --bg-glow-3: rgba(34,211,238,0.10);
+  --surface: rgba(255,255,255,0.045);
+  --surface-2: rgba(255,255,255,0.065);
+  --surface-solid: #131120;
+  --line: rgba(255,255,255,0.09);
+  --text: #f3f1fb;
+  --muted: #948fb0;
+  --accent: #a78bfa;
+  --accent-dim: #c4b1ff;
+  --accent-soft: rgba(167,139,250,0.16);
+  --violet: #a78bfa;
+  --magenta: #f472b6;
+  --cyan: #38bdf8;
+  --profit: #34d399;
+  --loss: #fb7185;
+  --loss-soft: rgba(251,113,133,0.14);
+  --profit-soft: rgba(52,211,153,0.14);
+  --highlight: #c4b1ff;
+  --highlight-soft: rgba(167,139,250,0.16);
+  --highlight-dim: #d9cdff;
+  --shadow-card: 0 1px 1px rgba(0,0,0,0.3), 0 1px 0 rgba(255,255,255,0.03) inset;
+  --shadow-card-hover: 0 0 0 1px rgba(255,255,255,0.05) inset, 0 24px 50px -20px rgba(0,0,0,0.6);
+  --shadow-glow: 0 0 0 1px rgba(167,139,250,0.14) inset, 0 30px 70px -26px rgba(139,92,246,0.45);
 }
 
-/* Category palette used for pills, dots, and charts */
+/* Category / chart palette — a single warm-to-cool arc (blue through
+   violet, magenta, orange, to red) so multi-series charts read like
+   one gradient ring rather than assorted flat colors. */
 :root {
-  --cat-0: #4c86ff; --cat-1: #1fa15a; --cat-2: #ff5c5c; --cat-3: #f0a83c;
-  --cat-4: #9c6bf2; --cat-5: #ec5fa3; --cat-6: #2fb8c9; --cat-7: #8a8f9c;
+  --cat-0: #3b82f6; --cat-1: #8b5cf6; --cat-2: #d946ef; --cat-3: #ec4899;
+  --cat-4: #f97316; --cat-5: #f59e0b; --cat-6: #22d3ee; --cat-7: #64748b;
 }
 
 * { box-sizing: border-box; }
 
 html, body {
   margin: 0;
+  min-height: 100vh;
   background: var(--bg);
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', system-ui, sans-serif;
@@ -66,6 +87,18 @@ html, body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   transition: background 0.25s cubic-bezier(0.4,0,0.2,1), color 0.25s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* The signature move: a fixed aurora mesh behind everything. Subtle in
+   light mode, a real glow in dark mode. Never repeated as a decoration
+   anywhere else in the UI. */
+body {
+  background-image:
+    radial-gradient(760px 480px at 14% -6%, var(--bg-glow-1), transparent 60%),
+    radial-gradient(680px 520px at 88% 8%, var(--bg-glow-2), transparent 60%),
+    radial-gradient(900px 620px at 50% 105%, var(--bg-glow-3), transparent 60%);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
 }
 
 .mono { font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; }
@@ -77,6 +110,8 @@ html, body {
   width: 224px;
   flex-shrink: 0;
   background: var(--surface);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-right: 1px solid var(--line);
   padding: 28px 18px;
   display: flex;
@@ -86,11 +121,15 @@ html, body {
 
 .brand {
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif;
-  font-size: 19px;
+  font-size: 20px;
   font-weight: 800;
   letter-spacing: -0.02em;
-  color: var(--text);
   margin: 0 0 2px 4px;
+  background: linear-gradient(120deg, var(--violet), var(--magenta));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  width: fit-content;
 }
 
 .brand-sub {
@@ -107,7 +146,7 @@ html, body {
   align-items: center;
   gap: 10px;
   padding: 10px 14px;
-  border-radius: 10px;
+  border-radius: 980px;
   cursor: pointer;
   color: var(--muted);
   font-size: 13.5px;
@@ -118,8 +157,12 @@ html, body {
 .nav-item + .nav-item { margin-top: 2px; }
 .nav-item .tick { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--line); font-weight: 500; }
 .nav-item:hover { background: var(--surface-2); color: var(--text); }
-.nav-item.active { background: var(--accent-soft); color: var(--accent-dim); }
-.nav-item.active .tick { color: var(--accent); }
+.nav-item.active {
+  background: linear-gradient(120deg, var(--violet), var(--magenta));
+  color: #fff;
+  box-shadow: 0 8px 20px -8px rgba(139,92,246,0.6);
+}
+.nav-item.active .tick { color: rgba(255,255,255,0.8); }
 
 .sidebar-footer {
   margin-top: auto;
@@ -157,6 +200,8 @@ main {
 /* ---------- Cards / ledger tables ---------- */
 .card {
   background: var(--surface);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   padding: 26px 28px;
@@ -164,7 +209,7 @@ main {
   box-shadow: var(--shadow-card);
   transition: box-shadow 0.25s var(--ease), border-color 0.25s var(--ease);
 }
-.card:hover { border-color: color-mix(in srgb, var(--line) 60%, var(--muted)); }
+.card:hover { border-color: color-mix(in srgb, var(--line) 50%, var(--accent)); }
 
 .card-title {
   font-size: 13px;
@@ -182,14 +227,14 @@ main {
 .card-title select {
   background: var(--surface-2);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 980px;
   color: var(--text);
   font-family: 'IBM Plex Mono', monospace;
   font-size: 12px;
   font-weight: 600;
   text-transform: none;
   letter-spacing: normal;
-  padding: 5px 8px;
+  padding: 6px 12px;
   flex-shrink: 0;
   min-width: 140px;
   max-width: 200px;
@@ -299,14 +344,14 @@ table.ledger td.col-highlight input:focus { border-bottom-color: var(--highlight
 .quick-add-row input[type="text"] {
   background: var(--surface-2);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 980px;
   color: var(--text);
-  padding: 9px 11px;
+  padding: 9px 14px;
   font-size: 13px;
 }
 .quick-add-row select { font-family: 'Inter', sans-serif; }
 .quick-add-row input[type="number"] { font-family: 'IBM Plex Mono', monospace; width: 120px; }
-.quick-add-row input[type="text"] { flex: 1; min-width: 160px; font-family: 'Inter', sans-serif; }
+.quick-add-row input[type="text"] { flex: 1; min-width: 160px; font-family: 'Inter', sans-serif; border-radius: 980px; }
 .quick-add-row select:focus, .quick-add-row input:focus { outline: none; border-color: var(--accent); }
 .quick-add-row .save-btn { flex-shrink: 0; }
 
@@ -320,36 +365,61 @@ table.ledger td.col-highlight input:focus { border-bottom-color: var(--highlight
 .stat-card {
   flex: 1; min-width: 180px;
   background: var(--surface);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   padding: 20px 22px;
   box-shadow: var(--shadow-card);
   transition: transform 0.2s var(--ease), border-color 0.2s var(--ease);
 }
-.stat-card:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--line) 60%, var(--muted)); }
+.stat-card:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--line) 50%, var(--accent)); }
 .stat-label { font-size: 12px; color: var(--muted); font-weight: 600; margin-bottom: 8px; }
-.stat-value { font-size: 27px; font-weight: 700; letter-spacing: -0.02em; }
+.stat-value { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; }
 /* Numeric grids stay tabular mono; standalone stat/hero figures read as a
-   confident rounded sans, closer to Copilot's headline numbers. */
+   confident rounded sans, closer to the big-number "hero" treatment. */
 .stat-value.mono, .hero-value.mono { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif; }
 
 /* ---------- Dashboard-specific ---------- */
 .hero-card {
+  position: relative;
+  overflow: hidden;
   background: var(--surface);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   color: var(--text);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  padding: 28px 30px;
+  padding: 30px 32px;
   margin-bottom: 22px;
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-glow);
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 24px;
   flex-wrap: wrap;
 }
+.hero-card::before {
+  content: "";
+  position: absolute;
+  top: -60%;
+  left: -10%;
+  width: 60%;
+  height: 220%;
+  background: radial-gradient(circle, var(--bg-glow-1), transparent 65%);
+  pointer-events: none;
+}
+.hero-card > * { position: relative; z-index: 1; }
 .hero-label { font-size: 12px; color: var(--muted); font-weight: 600; margin-bottom: 8px; }
-.hero-value { font-size: 42px; font-weight: 700; letter-spacing: -0.02em; }
+.hero-value {
+  font-size: 48px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  background: linear-gradient(120deg, var(--text), var(--violet) 120%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
 .hero-sub { font-size: 13px; color: var(--muted); margin-top: 6px; }
 .hero-sparkline { width: 220px; height: 70px; flex-shrink: 0; }
 
@@ -365,7 +435,7 @@ table.ledger td.col-highlight input:focus { border-bottom-color: var(--highlight
   display: inline-flex; align-items: center; gap: 6px;
   font-size: 11.5px; font-weight: 700; padding: 4px 10px; border-radius: 980px;
 }
-.cat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.cat-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 18%, transparent); }
 
 .trend-row, .activity-row {
   display: flex; align-items: center; justify-content: space-between;
@@ -382,7 +452,7 @@ table.ledger td.col-highlight input:focus { border-bottom-color: var(--highlight
 .trend-delta.down { color: var(--profit); }
 
 .activity-icon {
-  width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0;
+  width: 34px; height: 34px; border-radius: 12px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
   font-size: 15px; background: var(--surface-2); color: var(--muted);
 }
@@ -417,9 +487,11 @@ table.ledger td.col-highlight input:focus { border-bottom-color: var(--highlight
 .field-row input:focus { outline: none; border-color: var(--accent); }
 
 .save-btn {
-  background: var(--accent); color: #fff; border: none; border-radius: 980px;
+  background: linear-gradient(120deg, var(--violet), var(--magenta));
+  color: #fff; border: none; border-radius: 980px;
   padding: 10px 22px; font-weight: 700; font-size: 13px; cursor: pointer;
   transition: filter 0.2s var(--ease), transform 0.2s var(--ease);
+  box-shadow: 0 8px 20px -10px rgba(139,92,246,0.7);
 }
 .save-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
 
@@ -428,25 +500,32 @@ table.ledger td.col-highlight input:focus { border-bottom-color: var(--highlight
 /* ---------- Auth screen ---------- */
 #auth-screen, #lock-screen {
   min-height: 100vh; display: flex; align-items: center; justify-content: center;
-  background: var(--bg);
+  background: transparent;
 }
 .auth-box {
-  background: var(--surface); border: 1px solid var(--line); border-radius: 22px;
+  background: var(--surface);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--line); border-radius: 26px;
   padding: 44px 38px; width: 340px; text-align: center;
-  box-shadow: var(--shadow-card-hover);
+  box-shadow: var(--shadow-glow);
 }
-.auth-box .brand { font-size: 26px; margin-bottom: 4px; }
+.auth-box .brand { font-size: 27px; margin: 0 auto 4px; }
 .auth-box .brand-sub { margin-bottom: 24px; }
 .auth-box button {
-  width: 100%; background: var(--accent); color: #fff; border: none; border-radius: 980px;
+  width: 100%;
+  background: linear-gradient(120deg, var(--violet), var(--magenta));
+  color: #fff; border: none; border-radius: 980px;
   padding: 11px; font-weight: 700; font-size: 13.5px; cursor: pointer; margin-top: 4px;
   transition: filter 0.2s var(--ease), transform 0.2s var(--ease);
+  box-shadow: 0 8px 20px -10px rgba(139,92,246,0.7);
 }
 .auth-box button:hover { transform: translateY(-1px); }
 .google-btn {
   display: flex; align-items: center; justify-content: center; gap: 10px;
   background: var(--surface-2) !important; color: var(--text) !important;
-  border: 1px solid var(--line) !important; transition: border-color 0.2s var(--ease);
+  border: 1px solid var(--line) !important; box-shadow: none !important;
+  transition: border-color 0.2s var(--ease);
 }
 .google-btn:hover { border-color: var(--accent) !important; }
 .auth-msg { font-size: 12.5px; color: var(--muted); margin-top: 14px; min-height: 16px; }
@@ -457,8 +536,9 @@ table.ledger td.col-highlight input:focus { border-bottom-color: var(--highlight
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 20px;
 }
+.chart-grid-secondary { margin-top: 20px; }
 .chart-card { margin-bottom: 0; }
-.chart-wrap { position: relative; height: 240px; }
+.chart-wrap { position: relative; height: 260px; }
 
 /* ---------- Spending notes ---------- */
 .cell-wrap { display: flex; align-items: center; gap: 4px; }
@@ -475,7 +555,7 @@ table.ledger td.col-highlight input:focus { border-bottom-color: var(--highlight
 .note-popover {
   position: fixed;
   width: 220px;
-  background: var(--surface);
+  background: var(--surface-solid);
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 12px;
@@ -498,7 +578,7 @@ table.ledger td.col-highlight input:focus { border-bottom-color: var(--highlight
 /* ---------- Undo toast ---------- */
 .undo-toast {
   position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-  background: var(--surface); color: var(--text); border: 1px solid var(--line);
+  background: var(--surface-solid); color: var(--text); border: 1px solid var(--line);
   padding: 12px 18px; border-radius: 980px;
   display: flex; align-items: center; gap: 14px; font-size: 13px; z-index: 2000;
   box-shadow: var(--shadow-card-hover);
@@ -506,7 +586,8 @@ table.ledger td.col-highlight input:focus { border-bottom-color: var(--highlight
 }
 .undo-toast span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .undo-toast .undo-btn {
-  background: var(--accent); color: #fff; border: none; border-radius: 980px;
+  background: linear-gradient(120deg, var(--violet), var(--magenta));
+  color: #fff; border: none; border-radius: 980px;
   padding: 5px 12px; font-weight: 700; cursor: pointer; flex-shrink: 0;
 }
 
@@ -531,7 +612,7 @@ table.ledger td.col-highlight input:focus { border-bottom-color: var(--highlight
   table.ledger td, table.ledger th { padding: 11px 8px; }
   table.ledger input, table.ledger select { font-size: 14px; }
   .icon-btn { font-size: 16px; padding: 6px 10px; }
-  .chart-wrap { height: 200px; }
+  .chart-wrap { height: 220px; }
   .chart-grid { grid-template-columns: 1fr; }
   .hero-card { flex-direction: column; align-items: flex-start; }
   .hero-sparkline { width: 100%; }
@@ -542,7 +623,7 @@ table.ledger td.col-highlight input:focus { border-bottom-color: var(--highlight
   table.ledger.wide-8 thead, table.ledger.wide-cash thead { display: none; }
   table.ledger.wide-8 tr, table.ledger.wide-cash tr {
     display: block; border: 1px solid var(--line); border-radius: 14px;
-    margin-bottom: 10px; padding: 4px 14px; background: var(--surface);
+    margin-bottom: 10px; padding: 4px 14px; background: var(--surface-solid);
   }
   table.ledger.wide-8 tr.total-row, table.ledger.wide-cash tr.total-row { border-color: var(--muted); }
   table.ledger.wide-8 td, table.ledger.wide-cash td {
