@@ -18,7 +18,7 @@ let state = {
   webauthnCredentials: []
 };
 
-let charts = { incomeExpense: null, netWorth: null, categoryBreakdown: null, heroSparkline: null };
+let charts = { incomeExpense: null, netWorth: null, categoryBreakdown: null, heroSparkline: null, currencySplit: null, locationSplit: null };
 let lastSnapshotValue = null;
 let lastBrokerSnapshot = {};
 let openPopover = null;
@@ -487,6 +487,8 @@ function renderPortfolio() {
   snapshotNetWorth(grandVal);
   snapshotBrokerHistory();
   renderDashboard();
+  renderCurrencySplitChart();
+  renderLocationSplitChart();
 }
 
 async function snapshotNetWorth(totalEUR) {
@@ -899,6 +901,91 @@ function renderCharts() {
   renderIncomeExpenseChart();
   renderNetWorthChart();
   renderCategoryBreakdownChart();
+  renderCurrencySplitChart();
+  renderLocationSplitChart();
+}
+
+// ---------------- Portfolio mix (currency & location) ----------------
+
+// Known account/broker names -> where the money actually sits. Matched by
+// substring for distinctive names and by whole word for short ones (so "bt"
+// matches the "BT Cont curent" account but not e.g. "Subtotal"). Extend this
+// list as new accounts are added — anything unmatched lands in "Unclassified"
+// rather than being silently guessed into the wrong bucket.
+const LOCATION_SUBSTR = {
+  OUT: ['xtb', 'trading212', 'trading 212', 'interactive brokers', 'ibkr', 'degiro', 'etoro', 'revolut'],
+  RO: ['tradeville', 'cristi', 'transilvania', 'raiffeisen']
+};
+const LOCATION_WORDS = { RO: ['bt', 'ing', 'brd', 'cec'] };
+
+function guessLocation(name) {
+  const n = (name || '').toLowerCase();
+  if (!n.trim()) return null;
+  if (LOCATION_SUBSTR.OUT.some(k => n.includes(k))) return 'OUT';
+  if (LOCATION_SUBSTR.RO.some(k => n.includes(k))) return 'RO';
+  const words = n.split(/[^a-z0-9]+/).filter(Boolean);
+  if (LOCATION_WORDS.RO.some(w => words.includes(w))) return 'RO';
+  return null;
+}
+
+function computePortfolioBreakdown() {
+  const byCurrency = { EUR: 0, RON: 0 };
+  const byLocation = { RO: 0, OUT: 0, Other: 0 };
+  const add = (amount, currency, name) => {
+    const eur = toEUR(amount, currency);
+    byCurrency[currency] = (byCurrency[currency] || 0) + eur;
+    const loc = guessLocation(name) || 'Other';
+    byLocation[loc] = (byLocation[loc] || 0) + eur;
+  };
+  state.brokers.forEach(b => add(b.valoare_port, b.currency, b.name));
+  state.cash.forEach(c => add(c.amount, c.currency, c.name));
+  return { byCurrency, byLocation };
+}
+
+function renderSplitDoughnut(canvasId, chartKey, entries, colorMap, title) {
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+  const filtered = entries.filter(([, v]) => v > 0.005);
+  const total = filtered.reduce((s, [, v]) => s + v, 0);
+  if (charts[chartKey]) charts[chartKey].destroy();
+  if (!filtered.length) { charts[chartKey] = null; return; }
+  charts[chartKey] = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: filtered.map(([k, , label]) => label || k),
+      datasets: [{
+        data: filtered.map(([, v]) => v),
+        backgroundColor: filtered.map(([k]) => colorMap[k] || '#64748b'),
+        borderColor: getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#07070c',
+        borderWidth: 3, hoverOffset: 6
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '72%',
+      plugins: {
+        legend: { position: 'bottom', labels: { color: chartTextColor(), font: { size: 11 }, boxWidth: 8, usePointStyle: true, pointStyle: 'circle', padding: 12 } },
+        centerText: {
+          enabled: true, value: fmt(total) + ' EUR', title,
+          valueColor: getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#fff',
+          titleColor: chartTextColor()
+        }
+      }
+    }
+  });
+}
+
+function renderCurrencySplitChart() {
+  const { byCurrency } = computePortfolioBreakdown();
+  const colors = { EUR: '#8b5cf6', RON: '#f59e0b' };
+  renderSplitDoughnut('chart-currency-split', 'currencySplit', Object.entries(byCurrency), colors, 'By currency');
+}
+
+function renderLocationSplitChart() {
+  const { byLocation } = computePortfolioBreakdown();
+  const labelMap = { RO: 'Romania', OUT: 'Outside RO', Other: 'Unclassified' };
+  const colors = { RO: '#22d3ee', OUT: '#ec4899', Other: '#64748b' };
+  const entries = Object.entries(byLocation).map(([k, v]) => [k, v, labelMap[k]]);
+  renderSplitDoughnut('chart-location-split', 'locationSplit', entries, colors, 'By location');
 }
 
 function renderIncomeExpenseChart() {
