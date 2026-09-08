@@ -759,9 +759,9 @@ function renderHeroSparkline() {
       labels: points.map(p => p.snapshot_date),
       datasets: [{
         data: points.map(p => Number(p.total_eur)),
-        borderColor: getComputedStyle(document.documentElement).getPropertyValue('--profit').trim() || '#34c778',
-        backgroundColor: 'transparent',
-        fill: false, tension: 0.3, pointRadius: 0, borderWidth: 2
+        borderColor: (c) => verticalGradient(c, [[0, '#ec4899'], [1, '#a78bfa']]),
+        backgroundColor: (c) => verticalGradient(c, [[0, 'rgba(139,92,246,0)'], [1, 'rgba(139,92,246,0.25)']]),
+        fill: true, tension: 0.35, pointRadius: 0, borderWidth: 2.5
       }]
     },
     options: {
@@ -841,8 +841,8 @@ function renderPensionChart() {
     data: {
       labels: points.map(p => p.transaction_date),
       datasets: [
-        { label: 'Net value (RON)', data: points.map(p => Number(p.valoare_neta)), borderColor: '#4c86ff', backgroundColor: 'rgba(76,134,255,0.08)', fill: true, tension: 0.3, pointRadius: 2 },
-        { label: 'Personal assets (RON)', data: points.map(p => Number(p.activ_personal)), borderColor: '#34c778', backgroundColor: 'rgba(52,199,120,0.08)', fill: true, tension: 0.3, pointRadius: 2 }
+        { label: 'Net value (RON)', data: points.map(p => Number(p.valoare_neta)), borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.10)', borderWidth: 2.5, fill: true, tension: 0.3, pointRadius: 2 },
+        { label: 'Personal assets (RON)', data: points.map(p => Number(p.activ_personal)), borderColor: '#22d3ee', backgroundColor: 'rgba(34,211,238,0.08)', borderWidth: 2.5, fill: true, tension: 0.3, pointRadius: 2 }
       ]
     },
     options: chartBaseOptions()
@@ -851,13 +851,49 @@ function renderPensionChart() {
 
 // ---------------- Charts ----------------
 
-const CHART_COLORS = ['#4c86ff', '#1fa15a', '#ff5c5c', '#f0a83c', '#9c6bf2', '#ec5fa3', '#2fb8c9', '#8a8f9c'];
+// A single warm-to-cool arc (blue -> violet -> magenta -> orange) so multi-
+// series charts read as one gradient family rather than assorted flat colors.
+const CHART_COLORS = ['#3b82f6', '#8b5cf6', '#d946ef', '#ec4899', '#f97316', '#f59e0b', '#22d3ee', '#64748b'];
 
 function colorForCategory(catId) {
   let hash = 0;
   for (let i = 0; i < catId.length; i++) hash = (hash * 31 + catId.charCodeAt(i)) >>> 0;
   return CHART_COLORS[hash % CHART_COLORS.length];
 }
+
+// Builds a top-to-bottom canvas gradient scoped to a chart's plot area.
+// Used as a scriptable `backgroundColor`/`borderColor` so bars and area fills
+// pick up the violet -> magenta glow instead of a flat color.
+function verticalGradient(context, stops) {
+  const { ctx, chartArea } = context.chart;
+  if (!chartArea) return stops[stops.length - 1][1];
+  const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+  stops.forEach(([offset, color]) => gradient.addColorStop(offset, color));
+  return gradient;
+}
+
+// Renders a big centered number + label inside a doughnut's hole, the way
+// a "total this month" figure sits inside the ring in a spending summary.
+const centerTextPlugin = {
+  id: 'centerText',
+  afterDraw(chart) {
+    const opts = chart.config.options?.plugins?.centerText;
+    if (!opts?.enabled) return;
+    const { ctx, chartArea: { width, height, left, top } } = chart;
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const cx = left + width / 2, cy = top + height / 2;
+    ctx.font = "800 25px -apple-system, BlinkMacSystemFont, 'Inter', sans-serif";
+    ctx.fillStyle = opts.valueColor || '#fff';
+    ctx.fillText(opts.value || '', cx, cy - 9);
+    ctx.font = "600 11px -apple-system, BlinkMacSystemFont, 'Inter', sans-serif";
+    ctx.fillStyle = opts.titleColor || '#888';
+    ctx.fillText(opts.title || '', cx, cy + 13);
+    ctx.restore();
+  }
+};
+Chart.register(centerTextPlugin);
 
 function renderCharts() {
   renderIncomeExpenseChart();
@@ -870,14 +906,26 @@ function renderIncomeExpenseChart() {
   if (!ctx) return;
   const income = [], expenses = [];
   for (let m = 1; m <= 12; m++) { income.push(state.income[m] || 0); expenses.push(categoryTotalForMonth(m)); }
+  const monthsWithExpense = expenses.filter(v => v > 0).length;
+  const avgExpense = monthsWithExpense ? expenses.reduce((a, b) => a + b, 0) / monthsWithExpense : 0;
   if (charts.incomeExpense) charts.incomeExpense.destroy();
   charts.incomeExpense = new Chart(ctx, {
-    type: 'bar',
     data: {
       labels: MONTHS,
       datasets: [
-        { label: 'Income', data: income, backgroundColor: '#1fa15a', borderRadius: 4, maxBarThickness: 18 },
-        { label: 'Expenses', data: expenses, backgroundColor: '#ff5c5c', borderRadius: 4, maxBarThickness: 18 }
+        {
+          type: 'bar', label: 'Income', data: income, borderRadius: 6, maxBarThickness: 16,
+          backgroundColor: (c) => verticalGradient(c, [[0, 'rgba(52,211,153,0.15)'], [1, '#34d399']])
+        },
+        {
+          type: 'bar', label: 'Expenses', data: expenses, borderRadius: 6, maxBarThickness: 16,
+          backgroundColor: (c) => verticalGradient(c, [[0, 'rgba(139,92,246,0.18)'], [1, '#8b5cf6'], [1, '#ec4899']])
+        },
+        {
+          type: 'line', label: 'Avg expenses', data: MONTHS.map(() => avgExpense),
+          borderColor: 'rgba(244,114,182,0.7)', borderWidth: 2, borderDash: [6, 5],
+          pointRadius: 0, fill: false, tension: 0
+        }
       ]
     },
     options: chartBaseOptions()
@@ -901,12 +949,13 @@ function renderNetWorthChart() {
       datasets: [{
         label: 'Net worth (EUR)',
         data: points.map(p => Number(p.total_eur)),
-        borderColor: '#4c86ff',
-        backgroundColor: 'rgba(76,134,255,0.10)',
+        borderColor: (c) => verticalGradient(c, [[0, '#ec4899'], [1, '#8b5cf6']]),
+        backgroundColor: (c) => verticalGradient(c, [[0, 'rgba(139,92,246,0.02)'], [1, 'rgba(139,92,246,0.35)']]),
+        borderWidth: 2.5,
         fill: true,
-        tension: 0.3,
+        tension: 0.35,
         pointRadius: points.length > 1 ? 2 : 4,
-        pointBackgroundColor: '#4c86ff'
+        pointBackgroundColor: '#8b5cf6'
       }]
     },
     options: chartBaseOptions()
@@ -919,16 +968,25 @@ function renderCategoryBreakdownChart() {
   const labels = state.categories.map(c => c.name);
   const data = state.categories.map(c => categoryYearTotal(c.id));
   const colors = state.categories.map(c => colorForCategory(c.id));
+  const total = data.reduce((a, b) => a + b, 0);
   if (charts.categoryBreakdown) charts.categoryBreakdown.destroy();
   charts.categoryBreakdown = new Chart(ctx, {
     type: 'doughnut',
     data: {
       labels,
-      datasets: [{ data, backgroundColor: colors, borderColor: getComputedStyle(document.documentElement).getPropertyValue('--surface').trim() || '#12161f', borderWidth: 2 }]
+      datasets: [{
+        data, backgroundColor: colors,
+        borderColor: getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#07070c',
+        borderWidth: 3, hoverOffset: 6
+      }]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom', labels: { color: chartTextColor(), font: { size: 11 }, boxWidth: 10, padding: 10 } } }
+      cutout: '72%',
+      plugins: {
+        legend: { position: 'bottom', labels: { color: chartTextColor(), font: { size: 11 }, boxWidth: 8, usePointStyle: true, pointStyle: 'circle', padding: 12 } },
+        centerText: { enabled: true, value: fmt(total), title: `Spend in ${state.year}`, valueColor: getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#fff', titleColor: chartTextColor() }
+      }
     }
   });
 }
@@ -1005,10 +1063,11 @@ function chartBaseOptions() {
   return {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend: { labels: { color: textColor, font: { size: 11 }, boxWidth: 10 } } },
+    interaction: { mode: 'index', intersect: false },
+    plugins: { legend: { labels: { color: textColor, font: { size: 11 }, boxWidth: 8, usePointStyle: true, pointStyle: 'circle' } } },
     scales: {
-      x: { ticks: { color: textColor, font: { size: 10 } }, grid: { color: gridColor } },
-      y: { ticks: { color: textColor, font: { size: 10 } }, grid: { color: gridColor } }
+      x: { ticks: { color: textColor, font: { size: 10 } }, grid: { display: false }, border: { display: false } },
+      y: { ticks: { color: textColor, font: { size: 10 } }, grid: { color: gridColor }, border: { display: false } }
     }
   };
 }
@@ -1019,7 +1078,7 @@ function chartTextColor() {
   return getComputedStyle(document.documentElement).getPropertyValue('--muted').trim() || '#767c8c';
 }
 function chartGridColor() {
-  return document.documentElement.getAttribute('data-theme') === 'dark' ? 'rgba(255,255,255,0.06)' : '#e6e8ef';
+  return document.documentElement.getAttribute('data-theme') === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(20,18,31,0.06)';
 }
 
 function applyTheme(theme) {
