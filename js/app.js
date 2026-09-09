@@ -942,11 +942,31 @@ function computePortfolioBreakdown() {
   return { byCurrency, byLocation };
 }
 
-function renderSplitDoughnut(canvasId, chartKey, entries, colorMap, title) {
+// Renders a real legend list (dot, name, amount, share) into a container
+// below a donut chart, instead of Chart.js's built-in row of tiny dots —
+// reads like an actual breakdown, not chart chrome. Pass showAmount:false
+// for breakdowns where the split itself (not the underlying amount) is the
+// point, e.g. currency or location exposure.
+function renderLegendList(containerId, items, showAmount = true) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const total = items.reduce((s, i) => s + i.value, 0) || 1;
+  if (!items.length) { el.innerHTML = ''; return; }
+  el.innerHTML = items.map(i => `
+    <div class="legend-row">
+      <span class="legend-dot" style="background:${i.color}"></span>
+      <span class="legend-name">${escapeHtml(i.label)}</span>
+      ${showAmount ? `<span class="legend-amount mono">${fmt(i.value)}</span>` : ''}
+      <span class="legend-pct mono">${(i.value / total * 100).toFixed(0)}%</span>
+    </div>`).join('');
+}
+
+function renderSplitDoughnut(canvasId, chartKey, entries, colorMap, title, legendId, showAmount = true) {
   const ctx = document.getElementById(canvasId);
   if (!ctx) return;
   const filtered = entries.filter(([, v]) => v > 0.005);
   const total = filtered.reduce((s, [, v]) => s + v, 0);
+  if (legendId) renderLegendList(legendId, filtered.map(([k, v, label]) => ({ label: label || k, value: v, color: colorMap[k] || '#64748b' })), showAmount);
   if (charts[chartKey]) charts[chartKey].destroy();
   if (!filtered.length) { charts[chartKey] = null; return; }
   charts[chartKey] = new Chart(ctx, {
@@ -963,7 +983,7 @@ function renderSplitDoughnut(canvasId, chartKey, entries, colorMap, title) {
     options: {
       responsive: true, maintainAspectRatio: false, cutout: '72%',
       plugins: {
-        legend: { position: 'bottom', labels: { color: chartTextColor(), font: { size: 11 }, boxWidth: 8, usePointStyle: true, pointStyle: 'circle', padding: 12 } },
+        legend: { display: false },
         centerText: {
           enabled: true, value: fmt(total) + ' EUR', title,
           valueColor: getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#fff',
@@ -977,7 +997,7 @@ function renderSplitDoughnut(canvasId, chartKey, entries, colorMap, title) {
 function renderCurrencySplitChart() {
   const { byCurrency } = computePortfolioBreakdown();
   const colors = { EUR: '#8b5cf6', RON: '#f59e0b' };
-  renderSplitDoughnut('chart-currency-split', 'currencySplit', Object.entries(byCurrency), colors, 'By currency');
+  renderSplitDoughnut('chart-currency-split', 'currencySplit', Object.entries(byCurrency), colors, 'By currency', 'currency-legend', false);
 }
 
 function renderLocationSplitChart() {
@@ -985,7 +1005,7 @@ function renderLocationSplitChart() {
   const labelMap = { RO: 'Romania', OUT: 'Outside RO', Other: 'Unclassified' };
   const colors = { RO: '#22d3ee', OUT: '#ec4899', Other: '#64748b' };
   const entries = Object.entries(byLocation).map(([k, v]) => [k, v, labelMap[k]]);
-  renderSplitDoughnut('chart-location-split', 'locationSplit', entries, colors, 'By location');
+  renderSplitDoughnut('chart-location-split', 'locationSplit', entries, colors, 'By location', 'location-legend', false);
 }
 
 function renderIncomeExpenseChart() {
@@ -1056,6 +1076,9 @@ function renderCategoryBreakdownChart() {
   const data = state.categories.map(c => categoryYearTotal(c.id));
   const colors = state.categories.map(c => colorForCategory(c.id));
   const total = data.reduce((a, b) => a + b, 0);
+  renderLegendList('category-legend', state.categories
+    .map((c, i) => ({ label: c.name, value: data[i], color: colors[i] }))
+    .filter(i => i.value > 0.005));
   if (charts.categoryBreakdown) charts.categoryBreakdown.destroy();
   charts.categoryBreakdown = new Chart(ctx, {
     type: 'doughnut',
@@ -1071,7 +1094,7 @@ function renderCategoryBreakdownChart() {
       responsive: true, maintainAspectRatio: false,
       cutout: '72%',
       plugins: {
-        legend: { position: 'bottom', labels: { color: chartTextColor(), font: { size: 11 }, boxWidth: 8, usePointStyle: true, pointStyle: 'circle', padding: 12 } },
+        legend: { display: false },
         centerText: { enabled: true, value: fmt(total), title: `Spend in ${state.year}`, valueColor: getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#fff', titleColor: chartTextColor() }
       }
     }
@@ -1147,14 +1170,21 @@ function renderBrokerHistoryChart() {
 function chartBaseOptions() {
   const textColor = chartTextColor();
   const gridColor = chartGridColor();
+  const narrow = window.innerWidth < 480;
   return {
     responsive: true,
     maintainAspectRatio: false,
     interaction: { mode: 'index', intersect: false },
-    plugins: { legend: { labels: { color: textColor, font: { size: 11 }, boxWidth: 8, usePointStyle: true, pointStyle: 'circle' } } },
+    plugins: { legend: { labels: { color: textColor, font: { size: narrow ? 12 : 11 }, boxWidth: 8, usePointStyle: true, pointStyle: 'circle' } } },
     scales: {
-      x: { ticks: { color: textColor, font: { size: 10 } }, grid: { display: false }, border: { display: false } },
-      y: { ticks: { color: textColor, font: { size: 10 } }, grid: { color: gridColor }, border: { display: false } }
+      x: {
+        ticks: { color: textColor, font: { size: narrow ? 11 : 10 }, autoSkip: true, maxRotation: 0, minRotation: 0, maxTicksLimit: narrow ? 6 : undefined },
+        grid: { display: false }, border: { display: false }
+      },
+      y: {
+        ticks: { color: textColor, font: { size: narrow ? 11 : 10 }, maxTicksLimit: narrow ? 5 : undefined },
+        grid: { color: gridColor }, border: { display: false }
+      }
     }
   };
 }
