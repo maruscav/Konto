@@ -2,15 +2,15 @@
 
 /* ============================================================
    Palette — "aurora ledger": a near-black canvas with a soft
-   violet -> magenta glow mesh behind the glass cards. The glow
+   blue -> cyan glow mesh behind the glass cards. The glow
    is the one signature move (hero number, primary chart fills,
    active nav) — everything else stays quiet so it reads.
    Green/red are reserved strictly for gains/losses.
    ============================================================ */
 :root {
   --bg: #f3f2f8;
-  --bg-glow-1: rgba(139,92,246,0.10);
-  --bg-glow-2: rgba(236,72,153,0.08);
+  --bg-glow-1: rgba(37,99,235,0.10);
+  --bg-glow-2: rgba(6,182,212,0.08);
   --bg-glow-3: rgba(56,189,248,0.06);
   --surface: rgba(255,255,255,0.86);
   --surface-2: #ecebf3;
@@ -18,58 +18,61 @@
   --line: #e2dff0;
   --text: #14121f;
   --muted: #6b6780;
-  --accent: #7c3aed;
-  --accent-dim: #6d28d9;
-  --accent-soft: #efe8fe;
-  --violet: #8b5cf6;
-  --magenta: #ec4899;
-  --cyan: #22d3ee;
+  --accent: #2563eb;
+  --accent-dim: #1d4ed8;
+  --accent-soft: #e5edff;
+  --accent-a: #2563eb;
+  --accent-b: #06b6d4;
+  --cyan: #06b6d4;
   --profit: #16a34a;
   --loss: #e11d48;
   --loss-soft: #fde2e7;
   --profit-soft: #e3f7ea;
-  --highlight: #7c3aed;
-  --highlight-soft: #efe8fe;
-  --highlight-dim: #6d28d9;
+  --highlight: #0891b2;
+  --highlight-soft: #e0f7fb;
+  --highlight-dim: #0e7490;
   --radius: 14px;
   --radius-lg: 22px;
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
   --shadow-card: 0 1px 2px rgba(20,18,31,0.04), 0 14px 30px -18px rgba(20,18,31,0.16);
   --shadow-card-hover: 0 4px 10px rgba(20,18,31,0.06), 0 24px 44px -18px rgba(20,18,31,0.22);
-  --shadow-glow: 0 0 0 1px rgba(139,92,246,0.10), 0 20px 60px -22px rgba(139,92,246,0.35);
+  --shadow-glow: 0 0 0 1px rgba(37,99,235,0.10), 0 20px 60px -22px rgba(37,99,235,0.35);
 }
 :root[data-theme="dark"] {
   --bg: #07070c;
-  --bg-glow-1: rgba(139,92,246,0.22);
-  --bg-glow-2: rgba(236,72,153,0.14);
-  --bg-glow-3: rgba(34,211,238,0.10);
+  --bg-glow-1: rgba(59,130,246,0.22);
+  --bg-glow-2: rgba(34,211,238,0.14);
+  --bg-glow-3: rgba(56,189,248,0.10);
   --surface: rgba(255,255,255,0.045);
   --surface-2: rgba(255,255,255,0.065);
   --surface-solid: #131120;
   --line: rgba(255,255,255,0.09);
   --text: #f3f1fb;
   --muted: #948fb0;
-  --accent: #a78bfa;
-  --accent-dim: #c4b1ff;
-  --accent-soft: rgba(167,139,250,0.16);
-  --violet: #a78bfa;
-  --magenta: #f472b6;
-  --cyan: #38bdf8;
+  --accent: #60a5fa;
+  --accent-dim: #93c5fd;
+  --accent-soft: rgba(96,165,250,0.16);
+  --accent-a: #3b82f6;
+  --accent-b: #22d3ee;
+  --cyan: #22d3ee;
   --profit: #34d399;
   --loss: #fb7185;
   --loss-soft: rgba(251,113,133,0.14);
   --profit-soft: rgba(52,211,153,0.14);
-  --highlight: #c4b1ff;
-  --highlight-soft: rgba(167,139,250,0.16);
-  --highlight-dim: #d9cdff;
+  --highlight: #67e8f9;
+  --highlight-soft: rgba(103,232,249,0.16);
+  --highlight-dim: #a5f3fc;
   --shadow-card: 0 1px 1px rgba(0,0,0,0.3), 0 1px 0 rgba(255,255,255,0.03) inset;
   --shadow-card-hover: 0 0 0 1px rgba(255,255,255,0.05) inset, 0 24px 50px -20px rgba(0,0,0,0.6);
-  --shadow-glow: 0 0 0 1px rgba(167,139,250,0.14) inset, 0 30px 70px -26px rgba(139,92,246,0.45);
+  --shadow-glow: 0 0 0 1px rgba(96,165,250,0.14) inset, 0 30px 70px -26px rgba(59,130,246,0.45);
 }
 
 /* Category / chart palette — a single warm-to-cool arc (blue through
    violet, magenta, orange, to red) so multi-series charts read like
-   one gradient ring rather than assorted flat colors. */
+   one gradient ring rather than assorted flat colors. Categorical
+   breakdowns (6-8 spending categories) intentionally stay multi-hued —
+   this is the one place a purple/magenta swatch is still fine, since it's
+   there to distinguish categories from each other, not to brand the app. */
 :root {
   --cat-0: #3b82f6; --cat-1: #8b5cf6; --cat-2: #d946ef; --cat-3: #ec4899;
   --cat-4: #f97316; --cat-5: #f59e0b; --cat-6: #22d3ee; --cat-7: #64748b;
@@ -140,7 +143,7 @@ body::before {
   font-weight: 800;
   letter-spacing: -0.02em;
   margin: 0 0 2px 4px;
-  background: linear-gradient(120deg, var(--violet), var(--magenta));
+  background: linear-gradient(120deg, var(--accent-a), var(--accent-b));
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -173,9 +176,9 @@ body::before {
 .nav-item .tick { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--line); font-weight: 500; }
 .nav-item:hover { background: var(--surface-2); color: var(--text); }
 .nav-item.active {
-  background: linear-gradient(120deg, var(--violet), var(--magenta));
+  background: linear-gradient(120deg, var(--accent-a), var(--accent-b));
   color: #fff;
-  box-shadow: 0 8px 20px -8px rgba(139,92,246,0.6);
+  box-shadow: 0 8px 20px -8px rgba(37,99,235,0.6);
 }
 .nav-item.active .tick { color: rgba(255,255,255,0.8); }
 
@@ -421,7 +424,7 @@ table.ledger td.col-highlight input:focus { border-bottom-color: var(--highlight
   font-size: 48px;
   font-weight: 800;
   letter-spacing: -0.03em;
-  background: linear-gradient(120deg, var(--text), var(--violet) 120%);
+  background: linear-gradient(120deg, var(--text), var(--accent-a) 120%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -493,11 +496,11 @@ table.ledger td.col-highlight input:focus { border-bottom-color: var(--highlight
 .field-row input:focus { outline: none; border-color: var(--accent); }
 
 .save-btn {
-  background: linear-gradient(120deg, var(--violet), var(--magenta));
+  background: linear-gradient(120deg, var(--accent-a), var(--accent-b));
   color: #fff; border: none; border-radius: 980px;
   padding: 10px 22px; font-weight: 700; font-size: 13px; cursor: pointer;
   transition: filter 0.2s var(--ease), transform 0.2s var(--ease);
-  box-shadow: 0 8px 20px -10px rgba(139,92,246,0.7);
+  box-shadow: 0 8px 20px -10px rgba(37,99,235,0.7);
 }
 .save-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
 
@@ -520,11 +523,11 @@ table.ledger td.col-highlight input:focus { border-bottom-color: var(--highlight
 .auth-box .brand-sub { margin-bottom: 24px; }
 .auth-box button {
   width: 100%;
-  background: linear-gradient(120deg, var(--violet), var(--magenta));
+  background: linear-gradient(120deg, var(--accent-a), var(--accent-b));
   color: #fff; border: none; border-radius: 980px;
   padding: 11px; font-weight: 700; font-size: 13.5px; cursor: pointer; margin-top: 4px;
   transition: filter 0.2s var(--ease), transform 0.2s var(--ease);
-  box-shadow: 0 8px 20px -10px rgba(139,92,246,0.7);
+  box-shadow: 0 8px 20px -10px rgba(37,99,235,0.7);
 }
 .auth-box button:hover { transform: translateY(-1px); }
 .google-btn {
@@ -546,6 +549,12 @@ table.ledger td.col-highlight input:focus { border-bottom-color: var(--highlight
 .chart-grid-secondary { margin-top: 20px; }
 .chart-card { margin-bottom: 0; }
 .chart-wrap { position: relative; height: 260px; }
+
+/* Trend charts (income/expenses, net worth) get their own full-width row —
+   time series read better with the extra horizontal room, rather than being
+   squeezed into a third of the row alongside the breakdown donuts. */
+.chart-card-wide { margin-bottom: 22px; }
+.chart-wrap-wide { height: 280px; }
 
 /* Rich legend rows (dot, name, amount, share) under the donut charts —
    replaces Chart.js's built-in legend so the breakdown reads like a real
@@ -610,7 +619,7 @@ table.ledger td.col-highlight input:focus { border-bottom-color: var(--highlight
 }
 .undo-toast span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .undo-toast .undo-btn {
-  background: linear-gradient(120deg, var(--violet), var(--magenta));
+  background: linear-gradient(120deg, var(--accent-a), var(--accent-b));
   color: #fff; border: none; border-radius: 980px;
   padding: 5px 12px; font-weight: 700; cursor: pointer; flex-shrink: 0;
 }
@@ -637,6 +646,7 @@ table.ledger td.col-highlight input:focus { border-bottom-color: var(--highlight
   table.ledger input, table.ledger select { font-size: 14px; }
   .icon-btn { font-size: 16px; padding: 6px 10px; }
   .chart-wrap { height: 240px; }
+  .chart-wrap-wide { height: 220px; }
   .chart-grid { grid-template-columns: 1fr; }
 
   /* Give the net-worth figure the big, centered "hero" treatment your
