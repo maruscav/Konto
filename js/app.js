@@ -752,24 +752,32 @@ function timeAgo(iso) {
 function renderHeroSparkline() {
   const ctx = document.getElementById('chart-hero-sparkline');
   if (!ctx) return;
-  const points = state.netWorth;
+  const points = state.netWorth.slice(-24); // cap bar count so they stay readable, not squished
   if (charts.heroSparkline) charts.heroSparkline.destroy();
   if (!points.length) { charts.heroSparkline = null; return; }
+  const values = points.map(p => Number(p.total_eur));
+  const avg = values.reduce((a, b) => a + b, 0) / values.length;
+  const dataMin = Math.min(...values), dataMax = Math.max(...values);
+  const pad = Math.max((dataMax - dataMin) * 0.15, 1);
   charts.heroSparkline = new Chart(ctx, {
-    type: 'line',
     data: {
       labels: points.map(p => p.snapshot_date),
-      datasets: [{
-        data: points.map(p => Number(p.total_eur)),
-        borderColor: (c) => verticalGradient(c, [[0, '#ec4899'], [1, '#a78bfa']]),
-        backgroundColor: (c) => verticalGradient(c, [[0, 'rgba(139,92,246,0)'], [1, 'rgba(139,92,246,0.25)']]),
-        fill: true, tension: 0.35, pointRadius: 0, borderWidth: 2.5
-      }]
+      datasets: [
+        {
+          type: 'bar', data: values, borderRadius: 3, maxBarThickness: 12, categoryPercentage: 0.7,
+          backgroundColor: (c) => verticalGradient(c, [[0, 'rgba(34,211,238,0.18)'], [1, '#3b82f6']])
+        },
+        {
+          type: 'line', data: values.map(() => avg),
+          borderColor: 'rgba(245,158,11,0.75)', borderWidth: 1.5, borderDash: [4, 4],
+          pointRadius: 0, fill: false, tension: 0
+        }
+      ]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false }, tooltip: { enabled: false } },
-      scales: { x: { display: false }, y: { display: false } }
+      scales: { x: { display: false }, y: { display: false, min: dataMin - pad, max: dataMax + pad } }
     }
   });
 }
@@ -843,7 +851,7 @@ function renderPensionChart() {
     data: {
       labels: points.map(p => p.transaction_date),
       datasets: [
-        { label: 'Net value (RON)', data: points.map(p => Number(p.valoare_neta)), borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.10)', borderWidth: 2.5, fill: true, tension: 0.3, pointRadius: 2 },
+        { label: 'Net value (RON)', data: points.map(p => Number(p.valoare_neta)), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.10)', borderWidth: 2.5, fill: true, tension: 0.3, pointRadius: 2 },
         { label: 'Personal assets (RON)', data: points.map(p => Number(p.activ_personal)), borderColor: '#22d3ee', backgroundColor: 'rgba(34,211,238,0.08)', borderWidth: 2.5, fill: true, tension: 0.3, pointRadius: 2 }
       ]
     },
@@ -882,16 +890,35 @@ const centerTextPlugin = {
     const opts = chart.config.options?.plugins?.centerText;
     if (!opts?.enabled) return;
     const { ctx, chartArea: { width, height, left, top } } = chart;
+    const cutoutStr = chart.options.cutout || '72%';
+    const cutoutFrac = typeof cutoutStr === 'string' ? parseFloat(cutoutStr) / 100 : cutoutStr;
+    // The doughnut's hole, not the canvas, is what the text has to fit
+    // inside — on a narrow mobile card the hole can be well under half the
+    // card's own width, so both lines shrink to fit it instead of a fixed
+    // font size that made the total overflow the ring.
+    const holeDiameter = Math.min(width, height) * cutoutFrac;
+    const maxTextWidth = holeDiameter * 0.84;
+    const family = "-apple-system, BlinkMacSystemFont, 'Inter', sans-serif";
     ctx.save();
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     const cx = left + width / 2, cy = top + height / 2;
-    ctx.font = "800 25px -apple-system, BlinkMacSystemFont, 'Inter', sans-serif";
+
+    let valueSize = 25;
+    ctx.font = `800 ${valueSize}px ${family}`;
+    const valueWidth = ctx.measureText(opts.value || '').width;
+    if (valueWidth > maxTextWidth) valueSize = Math.max(13, Math.floor(valueSize * (maxTextWidth / valueWidth)));
+    ctx.font = `800 ${valueSize}px ${family}`;
     ctx.fillStyle = opts.valueColor || '#fff';
-    ctx.fillText(opts.value || '', cx, cy - 9);
-    ctx.font = "600 11px -apple-system, BlinkMacSystemFont, 'Inter', sans-serif";
+    ctx.fillText(opts.value || '', cx, cy - valueSize * 0.42);
+
+    let titleSize = 11;
+    ctx.font = `600 ${titleSize}px ${family}`;
+    const titleWidth = ctx.measureText(opts.title || '').width;
+    if (titleWidth > maxTextWidth) titleSize = Math.max(9, Math.floor(titleSize * (maxTextWidth / titleWidth)));
+    ctx.font = `600 ${titleSize}px ${family}`;
     ctx.fillStyle = opts.titleColor || '#888';
-    ctx.fillText(opts.title || '', cx, cy + 13);
+    ctx.fillText(opts.title || '', cx, cy + valueSize * 0.5);
     ctx.restore();
   }
 };
@@ -907,16 +934,15 @@ function renderCharts() {
 
 // ---------------- Portfolio mix (currency & location) ----------------
 
-// Known account/broker names -> where the money actually sits. Matched by
-// substring for distinctive names and by whole word for short ones (so "bt"
-// matches the "BT Cont curent" account but not e.g. "Subtotal"). Extend this
-// list as new accounts are added — anything unmatched lands in "Unclassified"
-// rather than being silently guessed into the wrong bucket.
+// Known account/broker names -> where the money actually sits. Only exact,
+// confirmed matches — anything not explicitly confirmed lands in
+// "Unclassified" rather than being guessed, so the chart never claims a
+// split you didn't actually state. Extend this as you confirm more accounts.
 const LOCATION_SUBSTR = {
-  OUT: ['xtb', 'trading212', 'trading 212', 'interactive brokers', 'ibkr', 'degiro', 'etoro', 'revolut'],
-  RO: ['tradeville', 'cristi', 'transilvania', 'raiffeisen']
+  OUT: ['xtb', 'trading212', 'trading 212'],
+  RO: ['tradeville', 'cristi']
 };
-const LOCATION_WORDS = { RO: ['bt', 'ing', 'brd', 'cec'] };
+const LOCATION_WORDS = { RO: ['bt'] };
 
 function guessLocation(name) {
   const n = (name || '').toLowerCase();
@@ -996,7 +1022,7 @@ function renderSplitDoughnut(canvasId, chartKey, entries, colorMap, title, legen
 
 function renderCurrencySplitChart() {
   const { byCurrency } = computePortfolioBreakdown();
-  const colors = { EUR: '#8b5cf6', RON: '#f59e0b' };
+  const colors = { EUR: '#3b82f6', RON: '#f59e0b' };
   renderSplitDoughnut('chart-currency-split', 'currencySplit', Object.entries(byCurrency), colors, 'By currency', 'currency-legend', false);
 }
 
@@ -1026,11 +1052,11 @@ function renderIncomeExpenseChart() {
         },
         {
           type: 'bar', label: 'Expenses', data: expenses, borderRadius: 6, maxBarThickness: 16,
-          backgroundColor: (c) => verticalGradient(c, [[0, 'rgba(139,92,246,0.18)'], [1, '#8b5cf6'], [1, '#ec4899']])
+          backgroundColor: (c) => verticalGradient(c, [[0, 'rgba(34,211,238,0.18)'], [1, '#3b82f6']])
         },
         {
           type: 'line', label: 'Avg expenses', data: MONTHS.map(() => avgExpense),
-          borderColor: 'rgba(244,114,182,0.7)', borderWidth: 2, borderDash: [6, 5],
+          borderColor: 'rgba(245,158,11,0.75)', borderWidth: 2, borderDash: [6, 5],
           pointRadius: 0, fill: false, tension: 0
         }
       ]
@@ -1056,13 +1082,13 @@ function renderNetWorthChart() {
       datasets: [{
         label: 'Net worth (EUR)',
         data: points.map(p => Number(p.total_eur)),
-        borderColor: (c) => verticalGradient(c, [[0, '#ec4899'], [1, '#8b5cf6']]),
-        backgroundColor: (c) => verticalGradient(c, [[0, 'rgba(139,92,246,0.02)'], [1, 'rgba(139,92,246,0.35)']]),
+        borderColor: (c) => verticalGradient(c, [[0, '#22d3ee'], [1, '#3b82f6']]),
+        backgroundColor: (c) => verticalGradient(c, [[0, 'rgba(59,130,246,0.02)'], [1, 'rgba(59,130,246,0.35)']]),
         borderWidth: 2.5,
         fill: true,
         tension: 0.35,
         pointRadius: points.length > 1 ? 2 : 4,
-        pointBackgroundColor: '#8b5cf6'
+        pointBackgroundColor: '#3b82f6'
       }]
     },
     options: chartBaseOptions()
