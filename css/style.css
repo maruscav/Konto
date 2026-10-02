@@ -695,3 +695,12 @@ table.ledger td.col-highlight input:focus { border-bottom-color: var(--highlight
   .mobile-month-nav { display: flex; }
   table.ledger.wide-months { min-width: 0; }
 }
+
+/* Insights + account rows */
+.insight-row { display:flex; gap:10px; align-items:flex-start; padding:11px 0; border-bottom:1px solid var(--line); font-size:13.5px; }
+.insight-row:last-child { border-bottom:none; }
+.insight-dot { width:8px; height:8px; border-radius:50%; margin-top:7px; flex-shrink:0; background:var(--accent); }
+.insight-dot.good { background:var(--profit); }
+.insight-dot.bad { background:var(--loss); }
+.hero-change { font-weight:700; }
+.acct-share { color:var(--muted); font-size:11px; font-weight:600; }
