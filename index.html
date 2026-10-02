@@ -43,9 +43,9 @@
     <p class="brand">Konto</p>
     <p class="brand-sub">Personal Finance</p>
 
-    <div class="nav-item active" data-view="view-dashboard"><span class="tick">01</span> Dashboard</div>
-    <div class="nav-item" data-view="view-summary"><span class="tick">02</span> Summary</div>
-    <div class="nav-item" data-view="view-portfolio"><span class="tick">03</span> Portfolio</div>
+    <div class="nav-item active" data-view="view-dashboard"><span class="tick">01</span> Overview</div>
+    <div class="nav-item" data-view="view-portfolio"><span class="tick">02</span> Investments</div>
+    <div class="nav-item" data-view="view-summary"><span class="tick">03</span> Cash flow</div>
     <div class="nav-item" data-view="view-spending"><span class="tick">04</span> Spending</div>
     <div class="nav-item" data-view="view-pension"><span class="tick">05</span> Pension</div>
     <div class="nav-item" data-view="view-settings"><span class="tick">06</span> Settings</div>
@@ -60,51 +60,58 @@
 
   <main>
 
-    <!-- ---------- Dashboard view ---------- -->
+    <!-- ---------- Overview view ---------- -->
     <section id="view-dashboard" class="view active">
       <div class="view-header">
-        <h1>Dashboard</h1>
-        <p>Your net worth, this month's activity, and what's trending.</p>
+        <h1 id="greeting">Good morning</h1>
+        <p>Overview</p>
       </div>
 
       <div class="hero-card">
         <div>
-          <div class="hero-label">Net worth (EUR)</div>
-          <div class="hero-value mono" id="hero-net-worth">0.00</div>
-          <div class="hero-sub" id="hero-net-worth-ron"></div>
+          <div class="hero-label">Net worth</div>
+          <div class="hero-value mono" id="hero-net-worth">€ 0</div>
+          <div class="hero-sub"><span id="hero-change"></span> <span id="hero-net-worth-ron"></span></div>
         </div>
         <div class="hero-sparkline"><canvas id="chart-hero-sparkline"></canvas></div>
       </div>
 
       <div class="stat-row">
-        <div class="stat-card"><div class="stat-label">Income this month</div><div class="stat-value mono" id="dash-income">0.00</div></div>
-        <div class="stat-card"><div class="stat-label">Expenses this month</div><div class="stat-value mono" id="dash-expenses">0.00</div></div>
-        <div class="stat-card"><div class="stat-label">P/L this month</div><div class="stat-value mono" id="dash-pl">0.00</div></div>
+        <div class="stat-card"><div class="stat-label">Invested</div><div class="stat-value mono" id="ov-invested">€ 0</div></div>
+        <div class="stat-card"><div class="stat-label">Cash</div><div class="stat-value mono" id="ov-cash">€ 0</div></div>
+        <div class="stat-card"><div class="stat-label">Investment gain</div><div class="stat-value mono" id="ov-gain">€ 0</div></div>
+        <div class="stat-card"><div class="stat-label">Saved this month</div><div class="stat-value mono" id="dash-pl">€ 0</div></div>
       </div>
 
       <div class="dashboard-grid">
         <div class="card">
-          <p class="card-title">Trending categories <span class="mono" id="dash-month-label" style="font-weight:400;text-transform:none;letter-spacing:normal;"></span></p>
-          <div id="trending-list"></div>
+          <p class="card-title">Where your money is</p>
+          <div class="chart-wrap"><canvas id="chart-where"></canvas></div>
         </div>
         <div class="card">
-          <p class="card-title">Recent activity</p>
-          <div id="activity-list"></div>
+          <p class="card-title"><span id="dash-budget-title">Budget</span></p>
+          <div id="trending-list"></div>
         </div>
+      </div>
+
+      <div class="card">
+        <p class="card-title">All accounts</p>
+        <div id="accounts-list"></div>
       </div>
     </section>
 
-    <!-- ---------- Summary view ---------- -->
+    <!-- ---------- Cash flow view ---------- -->
     <section id="view-summary" class="view">
       <div class="view-header">
-        <h1>Summary — <span class="year-label"></span></h1>
+        <h1>Cash flow — <span class="year-label"></span></h1>
         <p>Income, expenses and monthly profit / loss.</p>
       </div>
 
       <div class="stat-row">
-        <div class="stat-card"><div class="stat-label">Total income</div><div class="stat-value mono" id="stat-income">0.00</div></div>
-        <div class="stat-card"><div class="stat-label">Total expenses</div><div class="stat-value mono" id="stat-expenses">0.00</div></div>
-        <div class="stat-card"><div class="stat-label">Overall P/L</div><div class="stat-value mono" id="stat-pl">0.00</div></div>
+        <div class="stat-card"><div class="stat-label">Income</div><div class="stat-value mono" id="stat-income">0.00</div></div>
+        <div class="stat-card"><div class="stat-label">Spending</div><div class="stat-value mono" id="stat-expenses">0.00</div></div>
+        <div class="stat-card"><div class="stat-label">Saved</div><div class="stat-value mono" id="stat-pl">0.00</div></div>
+        <div class="stat-card"><div class="stat-label">Savings rate</div><div class="stat-value mono" id="stat-rate">0%</div></div>
       </div>
 
       <div class="card">
@@ -124,40 +131,45 @@
         </div>
       </div>
 
-      <div class="card chart-card chart-card-wide">
-        <p class="card-title">Income vs expenses</p>
-        <div class="chart-wrap chart-wrap-wide"><canvas id="chart-income-expense"></canvas></div>
-      </div>
-
-      <div class="card chart-card chart-card-wide">
-        <p class="card-title">Net worth trend</p>
-        <div class="chart-wrap chart-wrap-wide"><canvas id="chart-net-worth"></canvas></div>
-      </div>
-
       <div class="chart-grid">
         <div class="card chart-card">
-          <p class="card-title">Spending by category</p>
+          <p class="card-title">Income vs spending</p>
+          <div class="chart-wrap"><canvas id="chart-income-expense"></canvas></div>
+        </div>
+        <div class="card chart-card">
+          <p class="card-title">Net worth trend</p>
+          <div class="chart-wrap"><canvas id="chart-net-worth"></canvas></div>
+        </div>
+        <div class="card chart-card">
+          <p class="card-title"><span id="cat-chart-title">By category</span></p>
           <div class="chart-wrap"><canvas id="chart-category-breakdown"></canvas></div>
-          <div class="legend-list" id="category-legend"></div>
-        </div>
-        <div class="card chart-card">
-          <p class="card-title">Currency exposure</p>
-          <div class="chart-wrap"><canvas id="chart-currency-split"></canvas></div>
-          <div class="legend-list" id="currency-legend"></div>
-        </div>
-        <div class="card chart-card">
-          <p class="card-title">Romania vs outside</p>
-          <div class="chart-wrap"><canvas id="chart-location-split"></canvas></div>
-          <div class="legend-list" id="location-legend"></div>
         </div>
       </div>
     </section>
 
-    <!-- ---------- Portfolio view ---------- -->
+    <!-- ---------- Investments view ---------- -->
     <section id="view-portfolio" class="view">
       <div class="view-header">
-        <h1>Portfolio</h1>
+        <h1>Investments</h1>
         <p>Brokers and cash, converted to EUR using your saved rate.</p>
+      </div>
+
+      <div class="hero-card">
+        <div>
+          <div class="hero-label">Portfolio value</div>
+          <div class="hero-value mono" id="inv-value">€ 0</div>
+          <div class="hero-sub" id="inv-sub"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="card-title">Insights</p>
+        <div id="insights-list"></div>
+      </div>
+
+      <div class="card chart-card">
+        <p class="card-title">Deposit timeline</p>
+        <div class="chart-wrap"><canvas id="chart-deposits"></canvas></div>
       </div>
 
       <div class="stat-row">
@@ -285,37 +297,37 @@
         </div>
       </div>
     </section>
+
     <!-- ---------- Pension view ---------- -->
-<!-- ---------- Pension view ---------- -->
-<section id="view-pension" class="view">
-  <div class="view-header">
-    <h1>Private pension</h1>
-    <p>Tracked separately — not included in net worth or portfolio totals.</p>
-  </div>
+    <section id="view-pension" class="view">
+      <div class="view-header">
+        <h1>Private pension</h1>
+        <p>Tracked separately — not included in net worth or portfolio totals.</p>
+      </div>
 
-  <div class="stat-row">
-    <div class="stat-card"><div class="stat-label">Net value (latest)</div><div class="stat-value mono" id="pension-latest-neta">0.00</div></div>
-    <div class="stat-card"><div class="stat-label">Personal assets (latest)</div><div class="stat-value mono" id="pension-latest-activ">0.00</div></div>
-    <div class="stat-card"><div class="stat-label">Difference</div><div class="stat-value mono" id="pension-latest-diff">0.00</div></div>
-    <div class="stat-card"><div class="stat-label">Difference %</div><div class="stat-value mono" id="pension-latest-diff-pct">0.00%</div></div>
-  </div>
+      <div class="stat-row">
+        <div class="stat-card"><div class="stat-label">Net value (latest)</div><div class="stat-value mono" id="pension-latest-neta">0.00</div></div>
+        <div class="stat-card"><div class="stat-label">Personal assets (latest)</div><div class="stat-value mono" id="pension-latest-activ">0.00</div></div>
+        <div class="stat-card"><div class="stat-label">Difference</div><div class="stat-value mono" id="pension-latest-diff">0.00</div></div>
+        <div class="stat-card"><div class="stat-label">Difference %</div><div class="stat-value mono" id="pension-latest-diff-pct">0.00%</div></div>
+      </div>
 
-  <div class="card chart-card">
-    <p class="card-title">Net value vs. Personal assets</p>
-    <div class="chart-wrap"><canvas id="chart-pension"></canvas></div>
-  </div>
-  
-  <div class="card">
-    <button class="add-row-btn" id="add-pension-btn">+ Add entry</button>
-    <p class="card-title">Transaction history</p>
-    <div class="table-scroll">
-    <table class="ledger">
-      <thead><tr><th>Transaction date</th><th>Net value (RON)</th><th>Personal assets (RON)</th><th>Difference</th><th>Difference %</th><th></th></tr></thead>
-      <tbody id="pension-tbody"></tbody>
-    </table>
-    </div>
-  </div>
-</section>
+      <div class="card chart-card">
+        <p class="card-title">Net value vs. Personal assets</p>
+        <div class="chart-wrap"><canvas id="chart-pension"></canvas></div>
+      </div>
+
+      <div class="card">
+        <button class="add-row-btn" id="add-pension-btn">+ Add entry</button>
+        <p class="card-title">Transaction history</p>
+        <div class="table-scroll">
+        <table class="ledger">
+          <thead><tr><th>Transaction date</th><th>Net value (RON)</th><th>Personal assets (RON)</th><th>Difference</th><th>Difference %</th><th></th></tr></thead>
+          <tbody id="pension-tbody"></tbody>
+        </table>
+        </div>
+      </div>
+    </section>
 
   </main>
 </div>
