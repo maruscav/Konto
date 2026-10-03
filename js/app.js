@@ -1292,11 +1292,23 @@ async function deleteAccount(msg) {
 
 // ---------------- Export to Excel ----------------
 
+async function chartImage(config, w = 760, h = 340) {
+  const cv = document.createElement('canvas');
+  cv.width = w; cv.height = h;
+  const white = { id: 'white', beforeDraw: (c) => { const x = c.ctx; x.save(); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.restore(); } };
+  config.plugins = [white];
+  config.options = { ...config.options, responsive: false, animation: false, devicePixelRatio: 1 };
+  const ch = new Chart(cv, config);
+  const url = cv.toDataURL('image/png');
+  ch.destroy();
+  return url;
+}
+
 async function exportToExcel() {
   const hint = document.getElementById('export-hint');
+  if (typeof ExcelJS === 'undefined') { hint.textContent = 'ExcelJS not loaded — check the script tag in index.html.'; return; }
   hint.textContent = 'Preparing...';
   try {
-    // income and spending are only loaded for the selected year, so fetch every year here
     const [{ data: inc }, { data: ent }] = await Promise.all([
       sb.from('monthly_income').select('*').eq('user_id', uid()).order('year').order('month'),
       sb.from('spending_entries').select('*').eq('user_id', uid()).order('year').order('month')
@@ -1304,35 +1316,85 @@ async function exportToExcel() {
     const catName = Object.fromEntries(state.categories.map(c => [c.id, c.name]));
     const brokerName = Object.fromEntries(state.brokers.map(b => [b.id, b.name]));
     const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+    const t = portfolioTotals();
+    const today = new Date().toISOString().slice(0, 10);
+    const M2 = '#,##0.00';
 
-    const wb = XLSX.utils.book_new();
-    const add = (name, rows) => XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows.length ? rows : [{}]), name);
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'Konto';
 
-    add('Brokers', state.brokers.map(b => ({
-      Broker: b.name, Currency: b.currency,
-      Investitie: Number(b.investitie), 'Valoare port': Number(b.valoare_port),
-      'Eval (EUR)': r2(toEUR(b.valoare_port, b.currency)),
-      'P/L': r2(Number(b.valoare_port) - Number(b.investitie)),
-      'Randament %': Number(b.investitie) ? r2((Number(b.valoare_port) - Number(b.investitie)) / Number(b.investitie) * 100) : 0
-    })));
-    add('Cash', state.cash.map(c => ({
-      Account: c.name, Currency: c.currency, Amount: Number(c.amount), 'Eval (EUR)': r2(toEUR(c.amount, c.currency))
-    })));
-    add('Income', (inc || []).map(i => ({ Year: i.year, Month: MONTHS[i.month - 1], Income: Number(i.income) })));
-    add('Spending', (ent || [])
-      .filter(e => Number(e.amount) !== 0 || e.note)
-      .map(e => ({ Year: e.year, Month: MONTHS[e.month - 1], Category: catName[e.category_id] || '', Amount: Number(e.amount), Note: e.note || '' })));
-    add('Net worth', state.netWorth.map(s => ({ Date: s.snapshot_date, 'Total (EUR)': r2(s.total_eur) })));
-    add('Broker history', state.brokerSnapshots.map(s => ({
-      Date: s.snapshot_date, Broker: brokerName[s.broker_id] || '', Currency: s.currency,
-      Investitie: Number(s.investitie), 'Valoare port': Number(s.valoare_port)
-    })));
-    add('Pension', (state.pension || []).map(p => ({
-      Date: p.transaction_date, 'Net value (RON)': Number(p.valoare_neta), 'Personal assets (RON)': Number(p.activ_personal)
-    })));
-    add('Settings', [{ 'EUR/RON rate': state.rate }]);
+    // ---------- Overview ----------
+    const ov = wb.addWorksheet('Overview', { views: [{ showGridLines: false }] });
+    ov.columns = [{ width: 26 }, { width: 18 }, { width: 18 }, { width: 18 }];
+    ov.getCell('A1').value = `Konto — export ${today}`;
+    ov.getCell('A1').font = { size: 16, bold: true };
+    const kpis = [
+      ['Net worth (EUR)', t.val + t.cash], ['Invested (EUR)', t.val], ['Cash (EUR)', t.cash],
+      ['Investment gain (EUR)', t.gain], ['Deposited (EUR)', t.inv], ['EUR/RON rate', state.rate]
+    ];
+    kpis.forEach(([label, v], i) => {
+      const r = 3 + i;
+      ov.getCell(`A${r}`).value = label;
+      ov.getCell(`A${r}`).font = { color: { argb: 'FF6B7280' } };
+      ov.getCell(`B${r}`).value = r2(v);
+      ov.getCell(`B${r}`).numFmt = label === 'EUR/RON rate' ? '0.0000' : '#,##0.00';
+      ov.getCell(`B${r}`).font = { bold: true };
+    });
 
-    XLSX.writeFile(wb, `konto-export-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    // charts as pictures (rendered offscreen with a white background)
+    const axis = { ticks: { color: '#444' }, grid: { color: '#e6e8ef' } };
+    const base = { plugins: { legend: { labels: { color: '#333' } } }, scales: { x: axis, y: axis } };
+    const accts = [
+      ...state.brokers.map(b => ({ name: b.name, eur: toEUR(b.valoare_port, b.currency) })),
+      ...state.cash.map(c => ({ name: c.name, eur: toEUR(c.amount, c.currency) }))
+    ].filter(a => a.eur > 0);
+    const inc12 = [], exp12 = [];
+    for (let m = 1; m <= 12; m++) { inc12.push(state.income[m] || 0); exp12.push(categoryTotalForMonth(m)); }
+
+    const imgs = [];
+    if (state.netWorth.length) imgs.push(await chartImage({ type: 'line', data: { labels: state.netWorth.map(p => p.snapshot_date), datasets: [{ label: 'Net worth (EUR)', data: state.netWorth.map(p => Number(p.total_eur)), borderColor: '#3e7bfa', backgroundColor: 'rgba(62,123,250,0.12)', fill: true, tension: 0.3 }] }, options: base }));
+    imgs.push(await chartImage({ type: 'bar', data: { labels: MONTHS, datasets: [{ label: `Income ${state.year}`, data: inc12, backgroundColor: '#1fa15a' }, { label: 'Spending', data: exp12, backgroundColor: '#e5484d' }] }, options: base }));
+    if (accts.length) imgs.push(await chartImage({ type: 'doughnut', data: { labels: accts.map(a => a.name), datasets: [{ data: accts.map(a => r2(a.eur)), backgroundColor: ['#3e7bfa', '#1fa15a', '#e5484d', '#f0a83c', '#9c6bf2', '#ec5fa3', '#2fb8c9', '#8a8f9c'] }] }, options: { plugins: { legend: { position: 'right', labels: { color: '#333' } } } } }, 560, 300));
+    imgs.forEach((url, i) => {
+      const id = wb.addImage({ base64: url, extension: 'png' });
+      ov.addImage(id, { tl: { col: 0, row: 10 + i * 18 }, ext: { width: 560, height: 250 } });
+    });
+
+    // ---------- Data sheets ----------
+    const sheet = (name, cols, rows) => {
+      const ws = wb.addWorksheet(name, { views: [{ state: 'frozen', ySplit: 1 }] });
+      ws.columns = cols.map(c => ({ header: c[0], key: c[1], width: c[2] || 14, style: c[3] ? { numFmt: c[3] } : {} }));
+      ws.addRows(rows);
+      const hr = ws.getRow(1);
+      hr.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      hr.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF3E7BFA' } };
+      ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: cols.length } };
+    };
+
+    sheet('Brokers', [['Broker', 'name', 24], ['Currency', 'ccy', 10], ['Investitie', 'inv', 16, M2], ['Valoare port', 'val', 16, M2], ['Eval (EUR)', 'eur', 16, M2], ['P/L', 'pl', 14, M2], ['Randament %', 'pct', 14, '0.00']],
+      state.brokers.map(b => { const pl = Number(b.valoare_port) - Number(b.investitie); return { name: b.name, ccy: b.currency, inv: Number(b.investitie), val: Number(b.valoare_port), eur: r2(toEUR(b.valoare_port, b.currency)), pl: r2(pl), pct: Number(b.investitie) ? r2(pl / Number(b.investitie) * 100) : 0 }; }));
+    sheet('Cash', [['Account', 'name', 24], ['Currency', 'ccy', 10], ['Amount', 'amt', 16, M2], ['Eval (EUR)', 'eur', 16, M2]],
+      state.cash.map(c => ({ name: c.name, ccy: c.currency, amt: Number(c.amount), eur: r2(toEUR(c.amount, c.currency)) })));
+    sheet('Income', [['Year', 'y', 8], ['Month', 'm', 10], ['Income', 'v', 16, M2]],
+      (inc || []).map(i => ({ y: i.year, m: MONTHS[i.month - 1], v: Number(i.income) })));
+    sheet('Spending', [['Year', 'y', 8], ['Month', 'm', 10], ['Category', 'cat', 22], ['Amount', 'v', 14, M2], ['Note', 'note', 50]],
+      (ent || []).filter(e => Number(e.amount) !== 0 || e.note).map(e => ({ y: e.year, m: MONTHS[e.month - 1], cat: catName[e.category_id] || '', v: Number(e.amount), note: e.note || '' })));
+    sheet('Net worth', [['Date', 'd', 14], ['Total (EUR)', 'v', 16, M2]],
+      state.netWorth.map(s => ({ d: s.snapshot_date, v: r2(s.total_eur) })));
+    sheet('Broker history', [['Date', 'd', 14], ['Broker', 'b', 24], ['Currency', 'c', 10], ['Investitie', 'i', 16, M2], ['Valoare port', 'v', 16, M2]],
+      state.brokerSnapshots.map(s => ({ d: s.snapshot_date, b: brokerName[s.broker_id] || '', c: s.currency, i: Number(s.investitie), v: Number(s.valoare_port) })));
+    sheet('Pension', [['Date', 'd', 14], ['Net value (RON)', 'n', 18, M2], ['Personal assets (RON)', 'a', 22, M2]],
+      (state.pension || []).map(p => ({ d: p.transaction_date, n: Number(p.valoare_neta), a: Number(p.activ_personal) })));
+
+    // ---------- download ----------
+    const buf = await wb.xlsx.writeBuffer();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+    a.download = `konto-export-${today}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     hint.textContent = 'Done.';
   } catch (err) {
     hint.textContent = 'Export failed: ' + (err.message || err);
