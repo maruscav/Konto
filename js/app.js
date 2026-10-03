@@ -796,16 +796,45 @@ function renderDepositChart() {
   if (depositChart) depositChart.destroy();
   const snaps = state.brokerSnapshots;
   if (!snaps.length) { depositChart = null; return; }
+
+  // total invested (EUR) after each snapshot date, carrying each broker's last value forward
   const dates = [...new Set(snaps.map(s => s.snapshot_date))].sort();
   const last = {};
-  const data = dates.map(d => {
+  const cum = dates.map(d => {
     snaps.filter(s => s.snapshot_date === d).forEach(s => last[s.broker_id] = toEUR(s.investitie, s.currency));
-    return Object.values(last).reduce((a, b) => a + b, 0);
+    return { d, v: Object.values(last).reduce((a, b) => a + b, 0) };
   });
+
+  // monthly deposit = change in total invested between month-ends
+  const year = new Date().getFullYear();
+  const curMonth = new Date().getMonth() + 1;
+  const before = cum.filter(p => p.d < `${year}-01-01`);
+  let prev = before.length ? before[before.length - 1].v : null;
+  const data = [];
+  for (let m = 1; m <= 12; m++) {
+    if (m > curMonth) { data.push(null); continue; }
+    const end = `${year}-${String(m).padStart(2, '0')}-31`;
+    const upTo = cum.filter(p => p.d <= end);
+    const v = upTo.length ? upTo[upTo.length - 1].v : null;
+    data.push(v === null || prev === null ? 0 : Math.round(v - prev));
+    if (v !== null) prev = v;
+  }
+
+  const opts = chartBaseOptions();
+  opts.plugins.legend.display = false;
   depositChart = new Chart(ctx, {
-    type: 'line',
-    data: { labels: dates, datasets: [{ label: 'Deposited (EUR)', data, borderColor: '#4c86ff', backgroundColor: 'rgba(76,134,255,0.10)', fill: true, stepped: true, pointRadius: dates.length > 1 ? 2 : 4 }] },
-    options: chartBaseOptions()
+    type: 'bar',
+    data: {
+      labels: MONTHS,
+      datasets: [{
+        label: 'Deposited (EUR)',
+        data,
+        backgroundColor: data.map(v => (v ?? 0) < 0 ? '#ff5c5c' : '#4c86ff'),
+        borderRadius: 4,
+        maxBarThickness: 28
+      }]
+    },
+    options: opts
   });
 }
 
