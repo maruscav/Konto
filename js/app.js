@@ -1290,6 +1290,58 @@ async function deleteAccount(msg) {
   }
 }
 
+// ---------------- Export to Excel ----------------
+
+async function exportToExcel() {
+  const hint = document.getElementById('export-hint');
+  hint.textContent = 'Preparing...';
+  try {
+    // income and spending are only loaded for the selected year, so fetch every year here
+    const [{ data: inc }, { data: ent }] = await Promise.all([
+      sb.from('monthly_income').select('*').eq('user_id', uid()).order('year').order('month'),
+      sb.from('spending_entries').select('*').eq('user_id', uid()).order('year').order('month')
+    ]);
+    const catName = Object.fromEntries(state.categories.map(c => [c.id, c.name]));
+    const brokerName = Object.fromEntries(state.brokers.map(b => [b.id, b.name]));
+    const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+
+    const wb = XLSX.utils.book_new();
+    const add = (name, rows) => XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows.length ? rows : [{}]), name);
+
+    add('Brokers', state.brokers.map(b => ({
+      Broker: b.name, Currency: b.currency,
+      Investitie: Number(b.investitie), 'Valoare port': Number(b.valoare_port),
+      'Eval (EUR)': r2(toEUR(b.valoare_port, b.currency)),
+      'P/L': r2(Number(b.valoare_port) - Number(b.investitie)),
+      'Randament %': Number(b.investitie) ? r2((Number(b.valoare_port) - Number(b.investitie)) / Number(b.investitie) * 100) : 0
+    })));
+    add('Cash', state.cash.map(c => ({
+      Account: c.name, Currency: c.currency, Amount: Number(c.amount), 'Eval (EUR)': r2(toEUR(c.amount, c.currency))
+    })));
+    add('Income', (inc || []).map(i => ({ Year: i.year, Month: MONTHS[i.month - 1], Income: Number(i.income) })));
+    add('Spending', (ent || [])
+      .filter(e => Number(e.amount) !== 0 || e.note)
+      .map(e => ({ Year: e.year, Month: MONTHS[e.month - 1], Category: catName[e.category_id] || '', Amount: Number(e.amount), Note: e.note || '' })));
+    add('Net worth', state.netWorth.map(s => ({ Date: s.snapshot_date, 'Total (EUR)': r2(s.total_eur) })));
+    add('Broker history', state.brokerSnapshots.map(s => ({
+      Date: s.snapshot_date, Broker: brokerName[s.broker_id] || '', Currency: s.currency,
+      Investitie: Number(s.investitie), 'Valoare port': Number(s.valoare_port)
+    })));
+    add('Pension', (state.pension || []).map(p => ({
+      Date: p.transaction_date, 'Net value (RON)': Number(p.valoare_neta), 'Personal assets (RON)': Number(p.activ_personal)
+    })));
+    add('Settings', [{ 'EUR/RON rate': state.rate }]);
+
+    XLSX.writeFile(wb, `konto-export-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    hint.textContent = 'Done.';
+  } catch (err) {
+    hint.textContent = 'Export failed: ' + (err.message || err);
+  }
+  setTimeout(() => hint.textContent = '', 3000);
+}
+
+document.getElementById('export-xlsx-btn').addEventListener('click', exportToExcel);
+
 // ---------------- Year navigation ----------------
 
 document.getElementById('year-prev').addEventListener('click', async () => { state.year--; await loadIncome(); await loadCategoriesAndSpending(); renderAll(); });
