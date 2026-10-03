@@ -797,42 +797,64 @@ function renderDepositChart() {
   const snaps = state.brokerSnapshots;
   if (!snaps.length) { depositChart = null; return; }
 
-  // total invested (EUR) after each snapshot date, carrying each broker's last value forward
-  const dates = [...new Set(snaps.map(s => s.snapshot_date))].sort();
-  const last = {};
-  const cum = dates.map(d => {
-    snaps.filter(s => s.snapshot_date === d).forEach(s => last[s.broker_id] = toEUR(s.investitie, s.currency));
-    return { d, v: Object.values(last).reduce((a, b) => a + b, 0) };
-  });
-
-  // monthly deposit = change in total invested between month-ends
   const year = new Date().getFullYear();
   const curMonth = new Date().getMonth() + 1;
-  const before = cum.filter(p => p.d < `${year}-01-01`);
-  let prev = before.length ? before[before.length - 1].v : null;
-  const data = [];
-  for (let m = 1; m <= 12; m++) {
-    if (m > curMonth) { data.push(null); continue; }
-    const end = `${year}-${String(m).padStart(2, '0')}-31`;
-    const upTo = cum.filter(p => p.d <= end);
-    const v = upTo.length ? upTo[upTo.length - 1].v : null;
-    data.push(v === null || prev === null ? 0 : Math.round(v - prev));
-    if (v !== null) prev = v;
-  }
+  const dates = [...new Set(snaps.map(s => s.snapshot_date))].sort();
+
+  // monthly deposit = change in total invested between month-ends.
+  // valueOf(s) returns a snapshot's amount, or null to ignore that snapshot.
+  const monthly = (valueOf) => {
+    const last = {};
+    const cum = dates.map(d => {
+      snaps.filter(s => s.snapshot_date === d).forEach(s => {
+        const v = valueOf(s);
+        if (v !== null) last[s.broker_id] = v;
+      });
+      return { d, v: Object.values(last).reduce((a, b) => a + b, 0) };
+    });
+    const before = cum.filter(p => p.d < `${year}-01-01`);
+    let prev = before.length ? before[before.length - 1].v : null;
+    const data = [];
+    for (let m = 1; m <= 12; m++) {
+      if (m > curMonth) { data.push(null); continue; }
+      const end = `${year}-${String(m).padStart(2, '0')}-31`;
+      const upTo = cum.filter(p => p.d <= end);
+      const v = upTo.length ? upTo[upTo.length - 1].v : null;
+      data.push(v === null || prev === null ? 0 : Math.round(v - prev));
+      if (v !== null) prev = v;
+    }
+    return data;
+  };
+
+  const ron = monthly(s => s.currency === 'RON' ? Number(s.investitie) : null);   // original RON
+  const eur = monthly(s => s.currency === 'EUR' ? Number(s.investitie) : null);   // original EUR
+  const ronAsEur = ron.map(v => v === null ? null : v / (state.rate || 1));       // for bar height only
+  const f0 = (n) => Math.round(n).toLocaleString('en-US');
 
   const opts = chartBaseOptions();
-  opts.plugins.legend.display = false;
+  opts.plugins.legend.display = true;
+  opts.scales.x.stacked = true;
+  opts.scales.y.stacked = true;
+  opts.plugins.tooltip = {
+    callbacks: {
+      label: (c) => c.datasetIndex === 0
+        ? `RON: ${f0(ron[c.dataIndex])} RON (≈ € ${f0(ronAsEur[c.dataIndex])})`
+        : `EUR: € ${f0(eur[c.dataIndex])}`,
+      footer: (items) => {
+        const i = items[0].dataIndex;
+        return `Total ≈ € ${f0((ronAsEur[i] || 0) + (eur[i] || 0))}`;
+      }
+    }
+  };
+
   depositChart = new Chart(ctx, {
     type: 'bar',
     data: {
       labels: MONTHS,
-      datasets: [{
-        label: 'Deposited (EUR)',
-        data,
-        backgroundColor: data.map(v => (v ?? 0) < 0 ? '#ff5c5c' : '#4c86ff'),
-        borderRadius: 4,
-        maxBarThickness: 28
-      }]
+      datasets: [
+        { label: 'RON deposits', data: ronAsEur, backgroundColor: '#f0a83c', maxBarThickness: 28 },
+        { label: 'EUR deposits', data: eur, backgroundColor: '#4c86ff', borderRadius: 4, maxBarThickness: 28 }
+      ]
     },
     options: opts
   });
