@@ -26,18 +26,39 @@ function planLabel(n) {
 // ---------- Math (same formulas as the Excel tracker) ----------
 // value(n) = value(n-1) * (1 + monthly rate) + monthly amount
 
+// Amount invested per fund in plan month n. Uses the new amount from the
+// "increase from" date onward (one step change), otherwise the base amount.
+function planAmountAt(n) {
+  const s = plan.settings;
+  if (s.increase_date && s.increase_amount != null && planIso(planMonthDate(n)) >= s.increase_date) {
+    return Number(s.increase_amount);
+  }
+  return Number(s.monthly_amount);
+}
+
+// Money actually paid in at the start. Falls back to the starting value of a fund
+// when its "paid in so far" field is empty.
+function planInvestedStart(s) {
+  const p1 = s.paid_sxr8 != null ? Number(s.paid_sxr8) : Number(s.start_sxr8);
+  const p2 = s.paid_vwce != null ? Number(s.paid_vwce) : Number(s.start_vwce);
+  return p1 + p2;
+}
+
 function planExpected() {
   const s = plan.settings;
-  const a = Number(s.monthly_amount);
   const r1 = planMonthlyRate(Number(s.return_sxr8));
   const r2 = planMonthlyRate(Number(s.return_vwce));
   const e1 = [Number(s.start_sxr8)];
   const e2 = [Number(s.start_vwce)];
+  const a = [0];                       // a[n] = amount per fund in month n
+  const inv = [planInvestedStart(s)];  // inv[n] = total paid in after month n
   for (let n = 1; n <= PLAN_MONTHS; n++) {
-    e1.push(e1[n - 1] * (1 + r1) + a);
-    e2.push(e2[n - 1] * (1 + r2) + a);
+    a.push(planAmountAt(n));
+    e1.push(e1[n - 1] * (1 + r1) + a[n]);
+    e2.push(e2[n - 1] * (1 + r2) + a[n]);
+    inv.push(inv[n - 1] + 2 * a[n]);
   }
-  return { e1, e2, a };
+  return { e1, e2, a, inv };
 }
 
 // Combined actual value of both funds after month n (n = 0 is the starting value).
@@ -80,6 +101,17 @@ function fillPlanForm() {
   planEl('plan-start-sxr8').value = s ? Number(s.start_sxr8) : 0;
   planEl('plan-start-vwce').value = s ? Number(s.start_vwce) : 0;
   planEl('plan-start-date').value = s ? s.start_date : defaultStart;
+  planEl('plan-inc-date').value = s?.increase_date ?? '';
+  planEl('plan-inc-amount').value = s?.increase_amount ?? '';
+  planEl('plan-paid-sxr8').value = s?.paid_sxr8 ?? '';
+  planEl('plan-paid-vwce').value = s?.paid_vwce ?? '';
+}
+
+// Empty field -> null, otherwise the number.
+function optNum(id) {
+  const raw = planEl(id).value.trim();
+  const v = parseFloat(raw);
+  return raw === '' || isNaN(v) ? null : v;
 }
 
 planEl('plan-save-btn').addEventListener('click', async () => {
@@ -92,8 +124,16 @@ planEl('plan-save-btn').addEventListener('click', async () => {
     start_sxr8: parseFloat(planEl('plan-start-sxr8').value) || 0,
     start_vwce: parseFloat(planEl('plan-start-vwce').value) || 0,
     start_date: planEl('plan-start-date').value,
+    increase_date: planEl('plan-inc-date').value || null,
+    increase_amount: optNum('plan-inc-amount'),
+    paid_sxr8: optNum('plan-paid-sxr8'),
+    paid_vwce: optNum('plan-paid-vwce'),
     updated_at: new Date().toISOString()
   };
+  if ((row.increase_date === null) !== (row.increase_amount === null)) {
+    hint.textContent = 'For an increase, fill in both the date and the new amount (or leave both empty).';
+    return;
+  }
   if (!(row.monthly_amount >= 0) || isNaN(row.return_sxr8) || isNaN(row.return_vwce) || !row.start_date) {
     hint.textContent = 'Enter an amount, both returns and a start date.';
     return;
@@ -145,8 +185,10 @@ function renderPlan() {
   const startTotal = Number(s.start_sxr8) + Number(s.start_vwce);
   const doneCount = Object.values(plan.entries).filter((e) => e.done).length;
   planEl('plan-progress').textContent = `${doneCount} of ${PLAN_MONTHS} months done`;
+  const incNote = s.increase_date && s.increase_amount != null
+    ? ` · from ${s.increase_date}: ${fmt0(s.increase_amount)} per fund` : '';
   planEl('plan-rate-note').textContent =
-    `· expected ${(planMonthlyRate(Number(s.return_sxr8)) * 100).toFixed(2)}% (SXR8) and ${(planMonthlyRate(Number(s.return_vwce)) * 100).toFixed(2)}% (VWCE) per month`;
+    `· expected ${(planMonthlyRate(Number(s.return_sxr8)) * 100).toFixed(2)}% (SXR8) and ${(planMonthlyRate(Number(s.return_vwce)) * 100).toFixed(2)}% (VWCE) per month${incNote}`;
 
   // Open the year that contains the first unfinished month, until the user navigates.
   if (!plan.yearTouched) {
@@ -176,7 +218,7 @@ function renderPlanStats(ex, startTotal) {
   }
   const actual = planActualTotal(L);
   const diff = actual - expected;
-  const invested = startTotal + 2 * ex.a * L;
+  const invested = ex.inv[L];
   const gain = actual - invested;
   actualEl.textContent = fmt0(actual);
   actualEl.className = 'stat-value mono';
@@ -200,7 +242,7 @@ function renderPlanTable(ex) {
     const prevTot = planActualTotal(n - 1);
     const diff = tot === null ? null : tot - expected;
     // Monthly % of the combined portfolio, after taking out this month's contributions.
-    const pct = tot !== null && prevTot ? ((tot - 2 * ex.a) / prevTot - 1) * 100 : null;
+    const pct = tot !== null && prevTot ? ((tot - 2 * ex.a[n]) / prevTot - 1) * 100 : null;
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -244,12 +286,12 @@ function renderPlanChart(ex, startTotal) {
 
   const labels = ['Start'];
   const expected = [startTotal];
-  const invested = [startTotal];
+  const invested = [ex.inv[0]];
   const actual = [startTotal];
   for (let n = 1; n <= PLAN_MONTHS; n++) {
     labels.push(planLabel(n));
     expected.push(ex.e1[n] + ex.e2[n]);
-    invested.push(startTotal + 2 * ex.a * n);
+    invested.push(ex.inv[n]);
     actual.push(planActualTotal(n)); // null = not entered yet, drawn as a gap
   }
 
