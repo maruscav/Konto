@@ -4,7 +4,7 @@
 // load order is safe.
 
 const PLAN_MONTHS = 240; // 20 years
-const plan = { settings: null, entries: {}, year: 1, yearTouched: false, chart: null };
+const plan = { settings: null, entries: {}, changes: [], year: 1, yearTouched: false, chart: null };
 
 const planIso = (d) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -26,14 +26,17 @@ function planLabel(n) {
 // ---------- Math (same formulas as the Excel tracker) ----------
 // value(n) = value(n-1) * (1 + monthly rate) + monthly amount
 
-// Amount invested per fund in plan month n. Uses the new amount from the
-// "increase from" date onward (one step change), otherwise the base amount.
+// Amount invested per fund in plan month n: the base amount, replaced by the
+// latest change whose date is on or before that month's last day.
+// plan.changes is kept sorted by date, oldest first.
 function planAmountAt(n) {
-  const s = plan.settings;
-  if (s.increase_date && s.increase_amount != null && planIso(planMonthDate(n)) >= s.increase_date) {
-    return Number(s.increase_amount);
+  const day = planIso(planMonthDate(n));
+  let amount = Number(plan.settings.monthly_amount);
+  for (const c of plan.changes) {
+    if (c.from_date <= day) amount = Number(c.amount);
+    else break;
   }
-  return Number(s.monthly_amount);
+  return amount;
 }
 
 // Money actually paid in at the start. Falls back to the starting value of a fund
@@ -81,11 +84,13 @@ function planLatestMonth() {
 // ---------- Load / save ----------
 
 async function loadPlan() {
-  const [{ data: s }, { data: e }] = await Promise.all([
+  const [{ data: s }, { data: e }, { data: ch }] = await Promise.all([
     sb.from('invest_plan_settings').select('*').eq('user_id', uid()).maybeSingle(),
-    sb.from('invest_plan_entries').select('*').eq('user_id', uid())
+    sb.from('invest_plan_entries').select('*').eq('user_id', uid()),
+    sb.from('invest_plan_changes').select('*').eq('user_id', uid()).order('from_date')
   ]);
   plan.settings = s || null;
+  plan.changes = ch || [];
   plan.entries = {};
   (e || []).forEach((r) => { plan.entries[r.month_index] = r; });
   fillPlanForm();
@@ -101,8 +106,6 @@ function fillPlanForm() {
   planEl('plan-start-sxr8').value = s ? Number(s.start_sxr8) : 0;
   planEl('plan-start-vwce').value = s ? Number(s.start_vwce) : 0;
   planEl('plan-start-date').value = s ? s.start_date : defaultStart;
-  planEl('plan-inc-date').value = s?.increase_date ?? '';
-  planEl('plan-inc-amount').value = s?.increase_amount ?? '';
   planEl('plan-paid-sxr8').value = s?.paid_sxr8 ?? '';
   planEl('plan-paid-vwce').value = s?.paid_vwce ?? '';
 }
@@ -124,16 +127,10 @@ planEl('plan-save-btn').addEventListener('click', async () => {
     start_sxr8: parseFloat(planEl('plan-start-sxr8').value) || 0,
     start_vwce: parseFloat(planEl('plan-start-vwce').value) || 0,
     start_date: planEl('plan-start-date').value,
-    increase_date: planEl('plan-inc-date').value || null,
-    increase_amount: optNum('plan-inc-amount'),
     paid_sxr8: optNum('plan-paid-sxr8'),
     paid_vwce: optNum('plan-paid-vwce'),
     updated_at: new Date().toISOString()
   };
-  if ((row.increase_date === null) !== (row.increase_amount === null)) {
-    hint.textContent = 'For an increase, fill in both the date and the new amount (or leave both empty).';
-    return;
-  }
   if (!(row.monthly_amount >= 0) || isNaN(row.return_sxr8) || isNaN(row.return_vwce) || !row.start_date) {
     hint.textContent = 'Enter an amount, both returns and a start date.';
     return;
@@ -170,8 +167,63 @@ async function savePlanEntry(n, patch) {
 
 // ---------- Render ----------
 
+// ---------- Amount changes (list of "from this date, invest X per fund") ----------
+
+function renderPlanChanges() {
+  const list = planEl('plan-changes-list');
+  if (!list) return;
+  list.innerHTML = plan.changes.length
+    ? plan.changes.map((c) => `
+        <div class="device-row">
+          <div>
+            <div class="device-name">${fmt0(c.amount)} per fund</div>
+            <div class="device-date">from ${c.from_date}</div>
+          </div>
+          <button class="icon-btn" type="button" data-id="${c.id}" title="Remove">✕</button>
+        </div>`).join('')
+    : '<div class="empty-state">No changes yet. The monthly amount above is used for every month.</div>';
+  list.querySelectorAll('.icon-btn').forEach((btn) => {
+    btn.addEventListener('click', () => removePlanChange(btn.dataset.id));
+  });
+}
+
+async function addPlanChange(fromDate, amount) {
+  const { data, error } = await sb.from('invest_plan_changes')
+    .insert({ user_id: uid(), from_date: fromDate, amount })
+    .select().single();
+  if (error) { alert('Could not save the change: ' + error.message); return; }
+  plan.changes.push(data);
+  plan.changes.sort((a, b) => (a.from_date < b.from_date ? -1 : a.from_date > b.from_date ? 1 : 0));
+  renderPlan();
+}
+
+async function removePlanChange(id) {
+  const c = plan.changes.find((x) => x.id === id);
+  if (!c) return;
+  const { error } = await sb.from('invest_plan_changes').delete().eq('id', id);
+  if (error) { alert('Could not remove the change: ' + error.message); return; }
+  plan.changes = plan.changes.filter((x) => x.id !== id);
+  renderPlan();
+  showUndoToast(`Removed: ${fmt0(c.amount)} from ${c.from_date}`, () => addPlanChange(c.from_date, Number(c.amount)));
+}
+
+planEl('plan-chg-add').addEventListener('click', async () => {
+  const hint = planEl('plan-chg-hint');
+  const date = planEl('plan-chg-date').value;
+  const amount = optNum('plan-chg-amount');
+  if (!date || amount === null || amount < 0) {
+    hint.textContent = 'Enter a date and a new amount per fund.';
+    return;
+  }
+  hint.textContent = '';
+  await addPlanChange(date, amount);
+  planEl('plan-chg-date').value = '';
+  planEl('plan-chg-amount').value = '';
+});
+
 function renderPlan() {
   if (!planEl('plan-card')) return;
+  renderPlanChanges();
   const s = plan.settings;
   planEl('plan-empty').style.display = s ? 'none' : '';
   planEl('plan-body').style.display = s ? '' : 'none';
@@ -185,8 +237,7 @@ function renderPlan() {
   const startTotal = Number(s.start_sxr8) + Number(s.start_vwce);
   const doneCount = Object.values(plan.entries).filter((e) => e.done).length;
   planEl('plan-progress').textContent = `${doneCount} of ${PLAN_MONTHS} months done`;
-  const incNote = s.increase_date && s.increase_amount != null
-    ? ` · from ${s.increase_date}: ${fmt0(s.increase_amount)} per fund` : '';
+  const incNote = plan.changes.map((c) => ` · from ${c.from_date}: ${fmt0(c.amount)} per fund`).join('');
   planEl('plan-rate-note').textContent =
     `· expected ${(planMonthlyRate(Number(s.return_sxr8)) * 100).toFixed(2)}% (SXR8) and ${(planMonthlyRate(Number(s.return_vwce)) * 100).toFixed(2)}% (VWCE) per month${incNote}`;
 
