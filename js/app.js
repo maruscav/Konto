@@ -210,7 +210,7 @@ async function unlockWithBiometric() {
 
 async function loadAll() {
   await Promise.all([loadPension(), loadSettings(), loadBrokers(), loadCash(), loadIncome(), loadCategoriesAndSpending(), loadNetWorthSnapshots(), loadBrokerSnapshots(), loadDashboardData()]);
-  renderAll();
+  renderAll(),loadPlan();
 }
 
 async function loadPension() {
@@ -358,6 +358,7 @@ function renderAll() {
   renderDashboard();
   renderBiometricSettings();
   renderPension();
+  renderPlan();
 }
 
 function renderYearLabels() {
@@ -1166,6 +1167,7 @@ function toggleTheme() {
   renderBrokerHistoryChart();
   renderDashboard(); 
   renderDepositChart();
+  renderPlan();
 }
 
 document.querySelectorAll('.theme-toggle-btn').forEach(btn => btn.addEventListener('click', toggleTheme));
@@ -1452,7 +1454,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
     item.classList.add('active');
     document.getElementById(item.dataset.view).classList.add('active');
     if (item.dataset.view === 'view-summary') renderCharts();
-    if (item.dataset.view === 'view-portfolio') { renderBrokerHistoryChart(); renderInvestmentsOverview(); }
+    if (item.dataset.view === 'view-portfolio') { renderBrokerHistoryChart(); renderInvestmentsOverview(); renderPlan(); }
     if (item.dataset.view === 'view-dashboard') { await loadDashboardData(); renderDashboard(); }
     if (item.dataset.view === 'view-pension') renderPensionChart();
   });
