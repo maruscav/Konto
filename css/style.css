@@ -704,3 +704,57 @@ table.ledger td.col-highlight input:focus { border-bottom-color: var(--highlight
 .insight-dot.bad { background:var(--loss); }
 .hero-change { font-weight:700; }
 .acct-share { color:var(--muted); font-size:11px; font-weight:600; }
+
+/* Append to the end of css/style.css */
+
+/* ---------- Plan vs actual ---------- */
+.plan-settings { margin-bottom: 18px; }
+.plan-settings summary {
+  cursor: pointer; color: var(--muted); font-size: 12.5px; font-weight: 600;
+  padding: 4px 0;
+}
+.plan-settings summary:hover { color: var(--text); }
+.plan-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+.plan-form label {
+  display: flex; flex-direction: column; gap: 5px;
+  font-size: 11.5px; color: var(--muted); font-weight: 600;
+}
+.plan-form input {
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px;
+  color: var(--text); padding: 8px 10px; font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+}
+.plan-form input:focus { outline: none; border-color: var(--accent); }
+.plan-note { font-size: 11.5px; color: var(--muted); font-weight: 500; }
+
+table.ledger input[type="checkbox"] {
+  width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer;
+}
+table.ledger.wide-plan { min-width: 780px; }
+table.ledger.wide-plan td:nth-child(2),
+table.ledger.wide-plan th:nth-child(2) { text-align: center; width: 56px; }
+
+/* Mobile: each month becomes a small card, same pattern as the brokers table */
+@media (max-width: 640px) {
+  table.ledger.wide-plan { min-width: 0; width: 100%; }
+  table.ledger.wide-plan thead { display: none; }
+  table.ledger.wide-plan tr {
+    display: block; border: 1px solid var(--line); border-radius: 14px;
+    margin-bottom: 10px; padding: 4px 14px; background: var(--surface-solid);
+  }
+  table.ledger.wide-plan td {
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px dashed var(--line); padding: 9px 0; text-align: right;
+  }
+  table.ledger.wide-plan td:last-child { border-bottom: none; }
+  table.ledger.wide-plan td::before {
+    content: attr(data-label); color: var(--muted); font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.06em; text-align: left; font-weight: 700;
+  }
+  table.ledger.wide-plan td:nth-child(2) { text-align: right; width: auto; }
+  table.ledger.wide-plan td input[type="number"] { width: 55%; }
+}
