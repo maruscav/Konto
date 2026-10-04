@@ -707,6 +707,8 @@ table.ledger td.col-highlight input:focus { border-bottom-color: var(--highlight
 
 /* Append to the end of css/style.css */
 
+/* Append to the end of css/style.css */
+
 /* ---------- Plan vs actual ---------- */
 .plan-settings { margin-bottom: 18px; }
 .plan-settings summary {
@@ -757,4 +759,22 @@ table.ledger.wide-plan th:nth-child(2) { text-align: center; width: 56px; }
   }
   table.ledger.wide-plan td:nth-child(2) { text-align: right; width: auto; }
   table.ledger.wide-plan td input[type="number"] { width: 55%; }
+}
+
+/* Amount changes row: date and amount inputs styled like the other pill inputs */
+#plan-card .quick-add-row input[type="date"] {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 980px;
+  color: var(--text);
+  padding: 9px 14px;
+  font-size: 13px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+#plan-card .quick-add-row input[type="date"]:focus { outline: none; border-color: var(--accent); }
+#plan-card .quick-add-row input[type="number"] { width: 230px; }
+:root[data-theme="dark"] #plan-card input[type="date"] { color-scheme: dark; }
+@media (max-width: 640px) {
+  #plan-card .quick-add-row input[type="date"],
+  #plan-card .quick-add-row input[type="number"] { width: 100%; }
 }
