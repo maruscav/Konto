@@ -9,6 +9,7 @@ let state = {
   mobileSpendMonth: new Date().getMonth() + 1,
   brokers: [],
   cash: [],
+  noteAccounts: [],
   income: {},
   categories: [],
   spending: {},
@@ -25,7 +26,6 @@ let openPopover = null;
 let selectedBrokerHistoryId = null;
 let pensionChart = null;
 let brokerHistoryChart = null;
-let depositChart = null;
 
 const fmt = (n) => (Number(n) || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const uid = () => session?.user?.id;
@@ -209,8 +209,13 @@ async function unlockWithBiometric() {
 // ---------------- Data load ----------------
 
 async function loadAll() {
-  await Promise.all([loadPension(), loadSettings(), loadBrokers(), loadCash(), loadIncome(), loadCategoriesAndSpending(), loadNetWorthSnapshots(), loadBrokerSnapshots(), loadDashboardData()]);
+  await Promise.all([loadPension(), loadSettings(), loadBrokers(), loadCash(), loadNoteAccounts(), loadIncome(), loadCategoriesAndSpending(), loadNetWorthSnapshots(), loadBrokerSnapshots(), loadDashboardData()]);
   renderAll(),loadPlan();
+}
+
+async function loadNoteAccounts() {
+  const { data } = await sb.from('notes_accounts').select('*').eq('user_id', uid()).order('sort_order');
+  state.noteAccounts = data || [];
 }
 
 async function loadPension() {
@@ -353,12 +358,49 @@ function renderAll() {
   renderRate();
   renderSummary();
   renderPortfolio();
+  renderNoteAccounts();
   renderSpending();
   renderCharts();
   renderDashboard();
   renderBiometricSettings();
   renderPension();
   renderPlan();
+}
+
+// "Notes" section: a copy of Cash & bank accounts that is deliberately NOT
+// part of any total, snapshot, chart, dashboard figure or export.
+function renderNoteAccounts() {
+  const tbody = document.getElementById('notes-acc-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  state.noteAccounts.forEach(n => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td data-label="Account"><input class="name-input" data-field="name" value="${escapeHtml(n.name)}"/></td>
+      <td data-label="Ccy">
+        <select data-field="currency" class="mono">
+          <option value="RON" ${n.currency==='RON'?'selected':''}>RON</option>
+          <option value="EUR" ${n.currency==='EUR'?'selected':''}>EUR</option>
+        </select>
+      </td>
+      <td data-label="Amount"><input type="number" step="0.01" class="mono" data-field="amount" value="${n.amount}"/></td>
+      <td class="row-actions" data-label=""><button class="icon-btn" title="Remove">✕</button></td>`;
+    tr.querySelectorAll('input,select').forEach(el => {
+      el.addEventListener('change', async (e) => {
+        const field = e.target.dataset.field;
+        let val = e.target.value;
+        if (field === 'amount') val = parseFloat(val) || 0;
+        n[field] = val;
+        await sb.from('notes_accounts').update({ [field]: val, updated_at: new Date().toISOString() }).eq('id', n.id);
+      });
+    });
+    tr.querySelector('.icon-btn').addEventListener('click', async () => {
+      await sb.from('notes_accounts').delete().eq('id', n.id);
+      state.noteAccounts = state.noteAccounts.filter(x => x.id !== n.id);
+      renderNoteAccounts();
+    });
+    tbody.appendChild(tr);
+  });
 }
 
 function renderYearLabels() {
@@ -771,95 +813,8 @@ function renderInvestmentsOverview() {
   el.textContent = fmt0(t.val);
   document.getElementById('inv-sub').textContent =
     `${fmtSigned(t.gain)} · ${t.gainPct.toFixed(1)}% on ${fmt0(t.inv)} deposited`;
-
-  // Insights
-  const rows = state.brokers.map(b => {
-    const inv = Number(b.investitie), pl = Number(b.valoare_port) - inv;
-    return { name: b.name, pct: inv ? pl / inv * 100 : 0, hasInv: inv > 0 };
-  }).filter(r => r.hasInv);
-  const out = [];
-  if (t.val > 0 && t.ron > 0) out.push({ kind: '', text: `${Math.round(t.ron / t.val * 100)}% of your portfolio is in RON. Consider the EUR/RON rate.` });
-  const best = [...rows].sort((a, b) => b.pct - a.pct)[0];
-  if (best && best.pct > 0) out.push({ kind: 'good', text: `${escapeHtml(best.name)} returned ${best.pct.toFixed(1)}%, your best account.` });
-  rows.filter(r => r.pct < 0).sort((a, b) => a.pct - b.pct)
-    .forEach(r => out.push({ kind: 'bad', text: `${escapeHtml(r.name)} is below what you deposited. Down ${Math.abs(r.pct).toFixed(1)}%.` }));
-  document.getElementById('insights-list').innerHTML = out.length
-    ? out.map(i => `<div class="insight-row"><span class="insight-dot ${i.kind}"></span><span>${i.text}</span></div>`).join('')
-    : '<div class="empty-state">Add brokers to see insights.</div>';
-
-  renderDepositChart();
 }
 
-// Total deposited (EUR) over time, from broker snapshots; carries each broker's last value forward
-function renderDepositChart() {
-  const ctx = document.getElementById('chart-deposits');
-  if (!ctx) return;
-  if (depositChart) depositChart.destroy();
-  const snaps = state.brokerSnapshots;
-  if (!snaps.length) { depositChart = null; return; }
-
-  const year = new Date().getFullYear();
-  const curMonth = new Date().getMonth() + 1;
-  const dates = [...new Set(snaps.map(s => s.snapshot_date))].sort();
-
-  // monthly deposit = change in total invested between month-ends.
-  // valueOf(s) returns a snapshot's amount, or null to ignore that snapshot.
-  const monthly = (valueOf) => {
-    const last = {};
-    const cum = dates.map(d => {
-      snaps.filter(s => s.snapshot_date === d).forEach(s => {
-        const v = valueOf(s);
-        if (v !== null) last[s.broker_id] = v;
-      });
-      return { d, v: Object.values(last).reduce((a, b) => a + b, 0) };
-    });
-    const before = cum.filter(p => p.d < `${year}-01-01`);
-    let prev = before.length ? before[before.length - 1].v : null;
-    const data = [];
-    for (let m = 1; m <= 12; m++) {
-      if (m > curMonth) { data.push(null); continue; }
-      const end = `${year}-${String(m).padStart(2, '0')}-31`;
-      const upTo = cum.filter(p => p.d <= end);
-      const v = upTo.length ? upTo[upTo.length - 1].v : null;
-      data.push(v === null || prev === null ? 0 : Math.round(v - prev));
-      if (v !== null) prev = v;
-    }
-    return data;
-  };
-
-  const ron = monthly(s => s.currency === 'RON' ? Number(s.investitie) : null);   // original RON
-  const eur = monthly(s => s.currency === 'EUR' ? Number(s.investitie) : null);   // original EUR
-  const ronAsEur = ron.map(v => v === null ? null : v / (state.rate || 1));       // for bar height only
-  const f0 = (n) => Math.round(n).toLocaleString('en-US');
-
-  const opts = chartBaseOptions();
-  opts.plugins.legend.display = true;
-  opts.scales.x.stacked = true;
-  opts.scales.y.stacked = true;
-  opts.plugins.tooltip = {
-    callbacks: {
-      label: (c) => c.datasetIndex === 0
-        ? `RON: ${f0(ron[c.dataIndex])} RON (≈ € ${f0(ronAsEur[c.dataIndex])})`
-        : `EUR: € ${f0(eur[c.dataIndex])}`,
-      footer: (items) => {
-        const i = items[0].dataIndex;
-        return `Total ≈ € ${f0((ronAsEur[i] || 0) + (eur[i] || 0))}`;
-      }
-    }
-  };
-
-  depositChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: MONTHS,
-      datasets: [
-        { label: 'RON deposits', data: ronAsEur, backgroundColor: '#f0a83c', maxBarThickness: 28 },
-        { label: 'EUR deposits', data: eur, backgroundColor: '#4c86ff', borderRadius: 4, maxBarThickness: 28 }
-      ]
-    },
-    options: opts
-  });
-}
 
 function timeAgo(iso) {
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -1165,8 +1120,7 @@ function toggleTheme() {
   renderPensionChart();
   renderHeroSparkline();
   renderBrokerHistoryChart();
-  renderDashboard(); 
-  renderDepositChart();
+  renderDashboard();
   renderPlan();
 }
 
@@ -1466,4 +1420,9 @@ document.getElementById('add-pension-btn').addEventListener('click', async () =>
   const today = new Date().toISOString().slice(0, 10);
   const { data, error } = await sb.from('pension_entries').insert({ user_id: uid(), transaction_date: today, valoare_neta: 0, activ_personal: 0 }).select().single();
   if (!error) { state.pension.push(data); renderPension(); }
+});
+
+document.getElementById('add-note-account-btn').addEventListener('click', async () => {
+  const { data, error } = await sb.from('notes_accounts').insert({ user_id: uid(), name: 'New note', currency: 'RON', amount: 0, sort_order: state.noteAccounts.length }).select().single();
+  if (!error) { state.noteAccounts.push(data); renderNoteAccounts(); }
 });
