@@ -192,6 +192,18 @@
         </div>
         <button class="add-row-btn" id="add-cash-btn">+ Add account</button>
       </div>
+
+      <div class="card">
+        <p class="card-title"><span>Notes <span class="plan-note">· not included in any total</span></span></p>
+        <div class="table-scroll">
+        <table class="ledger wide-cash">
+          <thead><tr><th>Account</th><th>Ccy</th><th>Amount</th><th></th></tr></thead>
+          <tbody id="notes-acc-tbody"></tbody>
+        </table>
+        </div>
+        <button class="add-row-btn" id="add-note-account-btn">+ Add note</button>
+      </div>
+      
       <div class="card chart-card">
         <p class="card-title">
           <span>Broker history (EUR)</span>
@@ -417,6 +429,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase-config.js"></script>
 <script src="js/plan.js?v=1"></script>
-<script src="js/app.js?v=3"></script>
+<script src="js/app.js?v=4"></script>
 </body>
 </html>
