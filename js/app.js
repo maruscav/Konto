@@ -16,8 +16,16 @@ let state = {
   notes: {},
   netWorth: [],
   brokerSnapshots: [],
-  webauthnCredentials: []
+  webauthnCredentials: [],
+  pension: [],
+  pension3: []
 };
+
+let pensionCharts = {};
+const PENSIONS = [
+  { key: 'pension',  table: 'pension_entries' },
+  { key: 'pension3', table: 'pension3_entries' }
+];
 
 let charts = { incomeExpense: null, netWorth: null, categoryBreakdown: null, heroSparkline: null };
 let lastSnapshotValue = null;
@@ -219,8 +227,10 @@ async function loadNoteAccounts() {
 }
 
 async function loadPension() {
-  const { data } = await sb.from('pension_entries').select('*').eq('user_id', uid()).order('transaction_date');
-  state.pension = data || [];
+  await Promise.all(PENSIONS.map(async (cfg) => {
+    const { data } = await sb.from(cfg.table).select('*').eq('user_id', uid()).order('transaction_date');
+    state[cfg.key] = data || [];
+  }));
 }
 
 async function loadSettings() {
@@ -854,11 +864,15 @@ function renderHeroSparkline() {
 }
 
 function renderPension() {
-  const tbody = document.getElementById('pension-tbody');
+  PENSIONS.forEach(renderPensionFor);
+}
+
+function renderPensionFor(cfg) {
+  const tbody = document.getElementById(`${cfg.key}-tbody`);
   if (!tbody) return;
   tbody.innerHTML = '';
 
-  const rows = [...state.pension].sort((a, b) => new Date(b.transaction_date) - new Date(a.transaction_date));
+  const rows = [...state[cfg.key]].sort((a, b) => new Date(b.transaction_date) - new Date(a.transaction_date));
 
   rows.forEach(p => {
     const diff = Number(p.activ_personal) - Number(p.valoare_neta);
@@ -879,45 +893,48 @@ function renderPension() {
         if (field !== 'transaction_date') val = parseFloat(val) || 0;
         const oldVal = p[field];
         p[field] = val;
-        const { error } = await sb.from('pension_entries').update({ [field]: val, updated_at: new Date().toISOString() }).eq('id', p.id);
+        const { error } = await sb.from(cfg.table).update({ [field]: val, updated_at: new Date().toISOString() }).eq('id', p.id);
         if (error) { p[field] = oldVal; alert('Could not save — check for a duplicate date.'); }
-        renderPension();
+        renderPensionFor(cfg);
       });
     });
     tr.querySelector('.icon-btn').addEventListener('click', async () => {
-      await sb.from('pension_entries').delete().eq('id', p.id);
-      state.pension = state.pension.filter(x => x.id !== p.id);
-      renderPension();
+      await sb.from(cfg.table).delete().eq('id', p.id);
+      state[cfg.key] = state[cfg.key].filter(x => x.id !== p.id);
+      renderPensionFor(cfg);
     });
     tbody.appendChild(tr);
   });
 
   const latest = rows[0];
-  if (latest) {
-    document.getElementById('pension-latest-neta').textContent = fmt(latest.valoare_neta);
-    document.getElementById('pension-latest-activ').textContent = fmt(latest.activ_personal);
-    const diff = Number(latest.activ_personal) - Number(latest.valoare_neta);
-    const diffPct = Number(latest.valoare_neta) ? (diff / Number(latest.valoare_neta) * 100) : 0;
+  const diff = latest ? Number(latest.activ_personal) - Number(latest.valoare_neta) : 0;
+  const diffPct = latest && Number(latest.valoare_neta) ? (diff / Number(latest.valoare_neta) * 100) : 0;
 
-    const diffEl = document.getElementById('pension-latest-diff');
-    diffEl.textContent = fmt(diff);
-    diffEl.className = 'stat-value mono ' + (diff >= 0 ? 'pos' : 'neg');
+  document.getElementById(`${cfg.key}-latest-neta`).textContent = fmt(latest?.valoare_neta);
+  document.getElementById(`${cfg.key}-latest-activ`).textContent = fmt(latest?.activ_personal);
 
-    const diffPctEl = document.getElementById('pension-latest-diff-pct');
-    diffPctEl.textContent = diffPct.toFixed(2) + '%';
-    diffPctEl.className = 'stat-value mono ' + (diffPct >= 0 ? 'pos' : 'neg');
-  }
+  const diffEl = document.getElementById(`${cfg.key}-latest-diff`);
+  diffEl.textContent = fmt(diff);
+  diffEl.className = 'stat-value mono ' + (diff >= 0 ? 'pos' : 'neg');
 
-  renderPensionChart();
+  const diffPctEl = document.getElementById(`${cfg.key}-latest-diff-pct`);
+  diffPctEl.textContent = diffPct.toFixed(2) + '%';
+  diffPctEl.className = 'stat-value mono ' + (diffPct >= 0 ? 'pos' : 'neg');
+
+  renderPensionChartFor(cfg);
 }
 
 function renderPensionChart() {
-  const ctx = document.getElementById('chart-pension');
+  PENSIONS.forEach(renderPensionChartFor);
+}
+
+function renderPensionChartFor(cfg) {
+  const ctx = document.getElementById(`chart-${cfg.key}`);
   if (!ctx) return;
-  const points = [...state.pension].sort((a, b) => new Date(a.transaction_date) - new Date(b.transaction_date));
-  if (pensionChart) pensionChart.destroy();
-  if (!points.length) { pensionChart = null; return; }
-  pensionChart = new Chart(ctx, {
+  const points = [...state[cfg.key]].sort((a, b) => new Date(a.transaction_date) - new Date(b.transaction_date));
+  if (pensionCharts[cfg.key]) pensionCharts[cfg.key].destroy();
+  if (!points.length) { pensionCharts[cfg.key] = null; return; }
+  pensionCharts[cfg.key] = new Chart(ctx, {
     type: 'line',
     data: {
       labels: points.map(p => p.transaction_date),
@@ -929,7 +946,6 @@ function renderPensionChart() {
     options: chartBaseOptions()
   });
 }
-
 // ---------------- Charts ----------------
 
 const CHART_COLORS = ['#4c86ff', '#1fa15a', '#ff5c5c', '#f0a83c', '#9c6bf2', '#ec5fa3', '#2fb8c9', '#8a8f9c'];
@@ -1361,8 +1377,10 @@ async function exportToExcel() {
       state.netWorth.map(s => ({ d: s.snapshot_date, v: r2(s.total_eur) })));
     sheet('Broker history', [['Date', 'd', 14], ['Broker', 'b', 24], ['Currency', 'c', 10], ['Investitie', 'i', 16, M2], ['Valoare port', 'v', 16, M2]],
       state.brokerSnapshots.map(s => ({ d: s.snapshot_date, b: brokerName[s.broker_id] || '', c: s.currency, i: Number(s.investitie), v: Number(s.valoare_port) })));
-    sheet('Pension', [['Date', 'd', 14], ['Net value (RON)', 'n', 18, M2], ['Personal assets (RON)', 'a', 22, M2]],
+    sheet('Pension II', [['Date', 'd', 14], ['Net value (RON)', 'n', 18, M2], ['Personal assets (RON)', 'a', 22, M2]],
       (state.pension || []).map(p => ({ d: p.transaction_date, n: Number(p.valoare_neta), a: Number(p.activ_personal) })));
+    sheet('Pension III', [['Date', 'd', 14], ['Net value (RON)', 'n', 18, M2], ['Personal assets (RON)', 'a', 22, M2]],
+      (state.pension3 || []).map(p => ({ d: p.transaction_date, n: Number(p.valoare_neta), a: Number(p.activ_personal) })));
 
     // ---------- download ----------
     const buf = await wb.xlsx.writeBuffer();
@@ -1410,16 +1428,18 @@ document.querySelectorAll('.nav-item').forEach(item => {
     if (item.dataset.view === 'view-summary') renderCharts();
     if (item.dataset.view === 'view-portfolio') { renderBrokerHistoryChart(); renderInvestmentsOverview(); renderPlan(); }
     if (item.dataset.view === 'view-dashboard') { await loadDashboardData(); renderDashboard(); }
-    if (item.dataset.view === 'view-pension') renderPensionChart();
+    if (item.dataset.view === 'view-pension' || item.dataset.view === 'view-pension3') renderPensionChart();
   });
 });
 
 initAuth();
 
-document.getElementById('add-pension-btn').addEventListener('click', async () => {
-  const today = new Date().toISOString().slice(0, 10);
-  const { data, error } = await sb.from('pension_entries').insert({ user_id: uid(), transaction_date: today, valoare_neta: 0, activ_personal: 0 }).select().single();
-  if (!error) { state.pension.push(data); renderPension(); }
+PENSIONS.forEach((cfg) => {
+  document.getElementById(`add-${cfg.key}-btn`).addEventListener('click', async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const { data, error } = await sb.from(cfg.table).insert({ user_id: uid(), transaction_date: today, valoare_neta: 0, activ_personal: 0 }).select().single();
+    if (!error) { state[cfg.key].push(data); renderPensionFor(cfg); }
+  });
 });
 
 document.getElementById('add-note-account-btn').addEventListener('click', async () => {
