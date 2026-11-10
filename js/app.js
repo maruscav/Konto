@@ -1435,10 +1435,14 @@ document.querySelectorAll('.nav-item').forEach(item => {
 initAuth();
 
 PENSIONS.forEach((cfg) => {
-  document.getElementById(`add-${cfg.key}-btn`).addEventListener('click', async () => {
+  const btn = document.getElementById(`add-${cfg.key}-btn`);
+  if (!btn) { console.error(`Missing button #add-${cfg.key}-btn in index.html`); return; }
+  btn.addEventListener('click', async () => {
     const today = new Date().toISOString().slice(0, 10);
     const { data, error } = await sb.from(cfg.table).insert({ user_id: uid(), transaction_date: today, valoare_neta: 0, activ_personal: 0 }).select().single();
-    if (!error) { state[cfg.key].push(data); renderPensionFor(cfg); }
+    if (error) { alert('Could not add entry: ' + error.message); return; }
+    state[cfg.key].push(data);
+    renderPensionFor(cfg);
   });
 });
 
