@@ -47,8 +47,9 @@
     <div class="nav-item" data-view="view-portfolio"><span class="tick">02</span> Investments</div>
     <div class="nav-item" data-view="view-summary"><span class="tick">03</span> Cash flow</div>
     <div class="nav-item" data-view="view-spending"><span class="tick">04</span> Spending</div>
-    <div class="nav-item" data-view="view-pension"><span class="tick">05</span> Pension</div>
-    <div class="nav-item" data-view="view-settings"><span class="tick">06</span> Settings</div>
+    <div class="nav-item" data-view="view-pension"><span class="tick">05</span> Pension II</div>
+    <div class="nav-item" data-view="view-pension3"><span class="tick">06</span> Pension III</div>
+    <div class="nav-item" data-view="view-settings"><span class="tick">07</span> Settings</div>
 
     <div class="sidebar-footer">
       <div>Curs EUR (RON): <span class="mono" id="rate-input-display"></span></div>
@@ -390,9 +391,10 @@
     </section>
 
     <!-- ---------- Pension view ---------- -->
+    <!-- ---------- Pension II view ---------- -->
     <section id="view-pension" class="view">
       <div class="view-header">
-        <h1>Private pension</h1>
+        <h1>Private pension II</h1>
         <p>Tracked separately — not included in net worth or portfolio totals.</p>
       </div>
 
@@ -415,6 +417,37 @@
         <table class="ledger">
           <thead><tr><th>Transaction date</th><th>Net value (RON)</th><th>Personal assets (RON)</th><th>Difference</th><th>Difference %</th><th></th></tr></thead>
           <tbody id="pension-tbody"></tbody>
+        </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- Pension III view ---------- -->
+    <section id="view-pension3" class="view">
+      <div class="view-header">
+        <h1>Private pension III</h1>
+        <p>Tracked separately — not included in net worth or portfolio totals.</p>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat-card"><div class="stat-label">Net value (latest)</div><div class="stat-value mono" id="pension3-latest-neta">0.00</div></div>
+        <div class="stat-card"><div class="stat-label">Personal assets (latest)</div><div class="stat-value mono" id="pension3-latest-activ">0.00</div></div>
+        <div class="stat-card"><div class="stat-label">Difference</div><div class="stat-value mono" id="pension3-latest-diff">0.00</div></div>
+        <div class="stat-card"><div class="stat-label">Difference %</div><div class="stat-value mono" id="pension3-latest-diff-pct">0.00%</div></div>
+      </div>
+
+      <div class="card chart-card">
+        <p class="card-title">Net value vs. Personal assets</p>
+        <div class="chart-wrap"><canvas id="chart-pension3"></canvas></div>
+      </div>
+
+      <div class="card">
+        <button class="add-row-btn" id="add-pension3-btn">+ Add entry</button>
+        <p class="card-title">Transaction history</p>
+        <div class="table-scroll">
+        <table class="ledger">
+          <thead><tr><th>Transaction date</th><th>Net value (RON)</th><th>Personal assets (RON)</th><th>Difference</th><th>Difference %</th><th></th></tr></thead>
+          <tbody id="pension3-tbody"></tbody>
         </table>
         </div>
       </div>
