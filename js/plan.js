@@ -362,7 +362,7 @@ function renderPlanChart(ex, startTotal) {
       datasets: [
         { label: 'Total invested', data: invested, borderColor: '#f0a83c', borderDash: [2, 3], borderWidth: 1.5, pointRadius: 0, tension: 0 },
         { label: 'Expected', data: expected, borderColor: '#8a8f9c', borderDash: [6, 4], borderWidth: 2, pointRadius: 0, tension: 0.2 },
-        { label: 'Actual', data: actual, borderColor: '#4c86ff', backgroundColor: '#4c86ff', borderWidth: 2, pointRadius: 3, spanGaps: false, tension: 0.2 }
+        { label: 'Actual', data: actual, borderColor: '#7AA2F7', backgroundColor: '#7AA2F7', borderWidth: 2, pointRadius: 3, spanGaps: false, tension: 0.2 }
       ]
     },
     options: opts
