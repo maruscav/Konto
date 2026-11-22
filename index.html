@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="private">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Konto — Finance Tracker</title>
-<link rel="stylesheet" href="css/style.css?v=2">
+<link rel="stylesheet" href="css/style.css?v=3">
 </head>
 <body>
 
@@ -39,7 +39,24 @@
 <!-- ===================== App shell ===================== -->
 <div id="app-shell" style="display:none;">
 
-  <nav class="sidebar">
+  <header class="topbar">
+    <div class="topbar-left">
+      <span class="topbar-logo" aria-hidden="true">K</span>
+      <span class="topbar-title" id="topbar-title">Overview</span>
+    </div>
+    <div class="topbar-actions">
+      <button type="button" class="topbar-btn privacy-toggle-btn" aria-label="Show numbers" aria-pressed="true">
+        <svg class="ico-show" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+        <svg class="ico-hide" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.4 10.4 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4.2"/><path d="M6.6 6.6A16.6 16.6 0 0 0 2 12s3.6 7 10 7c1.9 0 3.5-.5 4.9-1.2"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+      </button>
+      <button type="button" class="topbar-btn" id="menu-btn" aria-label="Open menu" aria-expanded="false" aria-controls="sidebar">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+    </div>
+  </header>
+  <div class="drawer-backdrop" id="drawer-backdrop"></div>
+
+  <nav class="sidebar" id="sidebar" aria-label="Main menu">
     <p class="brand">Konto</p>
     <p class="brand-sub">Personal Finance</p>
 
@@ -67,6 +84,7 @@
 
     <div class="sidebar-footer">
       <div class="rate-line">EUR/RON <span class="mono" id="rate-input-display"></span></div>
+      <button type="button" class="privacy-toggle-btn" aria-pressed="true"><span class="privacy-label">Show numbers</span></button>
       <button id="lock-now-btn">Lock now</button>
       <button class="theme-toggle-btn">Dark mode</button>
       <button id="sign-out-btn">Sign out</button>
@@ -384,9 +402,10 @@
       <div class="card" style="max-width:420px;">
         <p class="card-title">Account</p>
         <p style="color:var(--muted); font-size:12.5px; margin-top:-8px;">
-          Also available here on mobile, where the sidebar footer is hidden to save space.
+          Quick actions for this device. Numbers are hidden every time the app opens, locks, or sits idle for a minute.
         </p>
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button type="button" class="add-row-btn privacy-toggle-btn" aria-pressed="true"><span class="privacy-label">Show numbers</span></button>
           <button class="add-row-btn" id="settings-lock-btn">Lock now</button>
           <button class="add-row-btn theme-toggle-btn">Dark mode</button>
           <button class="add-row-btn" id="settings-signout-btn">Sign out</button>
@@ -485,7 +504,8 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase-config.js"></script>
-<script src="js/plan.js?v=1"></script>
-<script src="js/app.js?v=5"></script>
+<script src="js/ui.js?v=1"></script>
+<script src="js/plan.js?v=2"></script>
+<script src="js/app.js?v=6"></script>
 </body>
 </html>
