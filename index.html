@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Konto — Finance Tracker</title>
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/style.css?v=2">
 </head>
 <body>
 
@@ -31,7 +31,7 @@
   <div class="auth-box">
     <p class="brand">Konto</p>
     <p class="brand-sub">Locked</p>
-    <button id="unlock-btn">🔓 Unlock with Face ID / Touch ID</button>
+    <button id="unlock-btn">Unlock with Face ID / Touch ID</button>
     <p class="auth-msg" id="lock-msg"></p>
   </div>
 </div>
@@ -43,18 +43,32 @@
     <p class="brand">Konto</p>
     <p class="brand-sub">Personal Finance</p>
 
-    <div class="nav-item active" data-view="view-dashboard"><span class="tick">01</span> Overview</div>
-    <div class="nav-item" data-view="view-portfolio"><span class="tick">02</span> Investments</div>
-    <div class="nav-item" data-view="view-summary"><span class="tick">03</span> Cash flow</div>
-    <div class="nav-item" data-view="view-spending"><span class="tick">04</span> Spending</div>
-    <div class="nav-item" data-view="view-pension"><span class="tick">05</span> Pension II</div>
-    <div class="nav-item" data-view="view-pension3"><span class="tick">06</span> Pension III</div>
-    <div class="nav-item" data-view="view-settings"><span class="tick">07</span> Settings</div>
+    <div class="nav-item active" data-view="view-dashboard">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      Overview</div>
+    <div class="nav-item" data-view="view-portfolio">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></svg>
+      Investments</div>
+    <div class="nav-item" data-view="view-summary">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h14"/><polyline points="14 4 18 8 14 12"/><path d="M20 16H6"/><polyline points="10 12 6 16 10 20"/></svg>
+      Cash flow</div>
+    <div class="nav-item" data-view="view-spending">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 10h18"/><path d="M7 15h4"/></svg>
+      Spending</div>
+    <div class="nav-item" data-view="view-pension">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10l9-6 9 6"/><path d="M5 10v8M10 10v8M14 10v8M19 10v8"/><path d="M3 20h18"/></svg>
+      Pension II</div>
+    <div class="nav-item" data-view="view-pension3">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10l9-6 9 6"/><path d="M5 10v8M10 10v8M14 10v8M19 10v8"/><path d="M3 20h18"/></svg>
+      Pension III</div>
+    <div class="nav-item" data-view="view-settings">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
+      Settings</div>
 
     <div class="sidebar-footer">
-      <div>Curs EUR (RON): <span class="mono" id="rate-input-display"></span></div>
-      <button id="lock-now-btn">🔒 Lock now</button>
-      <button class="theme-toggle-btn">🌙 Dark mode</button>
+      <div class="rate-line">EUR/RON <span class="mono" id="rate-input-display"></span></div>
+      <button id="lock-now-btn">Lock now</button>
+      <button class="theme-toggle-btn">Dark mode</button>
       <button id="sign-out-btn">Sign out</button>
     </div>
   </nav>
@@ -65,39 +79,49 @@
     <section id="view-dashboard" class="view active">
       <div class="view-header">
         <h1 id="greeting">Good morning</h1>
-        <p>Overview</p>
+        <p id="dash-date"></p>
       </div>
 
-      <div class="hero-card">
-        <div>
-          <div class="hero-label">Net worth</div>
-          <div class="hero-value mono" id="hero-net-worth">€ 0</div>
-          <div class="hero-sub"><span id="hero-change"></span> <span id="hero-net-worth-ron"></span></div>
+      <div class="card nw-card">
+        <div class="nw-top">
+          <div>
+            <div class="hero-label">Net worth</div>
+            <div class="hero-value mono" id="hero-net-worth">€ 0</div>
+            <div class="nw-delta-row">
+              <span class="nw-delta" id="hero-change"></span>
+              <span class="hero-sub" id="hero-range-label"></span>
+            </div>
+            <div class="hero-sub" id="hero-net-worth-ron"></div>
+          </div>
+          <div class="range-tabs" id="nw-range-tabs" role="group" aria-label="Chart range">
+            <button type="button" class="range-tab" data-range="1M" aria-pressed="false">1M</button>
+            <button type="button" class="range-tab" data-range="3M" aria-pressed="false">3M</button>
+            <button type="button" class="range-tab" data-range="6M" aria-pressed="false">6M</button>
+            <button type="button" class="range-tab" data-range="1Y" aria-pressed="false">1Y</button>
+            <button type="button" class="range-tab active" data-range="ALL" aria-pressed="true">All</button>
+          </div>
         </div>
-        <div class="hero-sparkline"><canvas id="chart-hero-sparkline"></canvas></div>
+        <div class="chart-wrap chart-wrap-nw"><canvas id="chart-networth-hero" role="img" aria-label="Net worth over time"></canvas></div>
       </div>
 
       <div class="stat-row">
-        <div class="stat-card"><div class="stat-label">Invested</div><div class="stat-value mono" id="ov-invested">€ 0</div></div>
-        <div class="stat-card"><div class="stat-label">Cash</div><div class="stat-value mono" id="ov-cash">€ 0</div></div>
-        <div class="stat-card"><div class="stat-label">Investment gain</div><div class="stat-value mono" id="ov-gain">€ 0</div></div>
-        <div class="stat-card"><div class="stat-label">Saved this month</div><div class="stat-value mono" id="dash-pl">€ 0</div></div>
+        <div class="stat-card"><div class="stat-label">Invested</div><div class="stat-value mono" id="ov-invested">€ 0</div><div class="stat-sub" id="ov-invested-sub"></div></div>
+        <div class="stat-card"><div class="stat-label">Cash</div><div class="stat-value mono" id="ov-cash">€ 0</div><div class="stat-sub" id="ov-cash-sub"></div></div>
+        <div class="stat-card"><div class="stat-label">Investment gain</div><div class="stat-value mono" id="ov-gain">€ 0</div><div class="stat-sub" id="ov-gain-sub"></div></div>
+        <div class="stat-card"><div class="stat-label">Saved this month</div><div class="stat-value mono" id="dash-pl">€ 0</div><div class="stat-sub" id="dash-pl-sub"></div></div>
       </div>
 
       <div class="dashboard-grid">
         <div class="card">
-          <p class="card-title">Where your money is</p>
-          <div class="chart-wrap"><canvas id="chart-where"></canvas></div>
+          <p class="card-title"><span>Where your money is</span><span class="card-meta" id="accounts-count"></span></p>
+          <div class="alloc-bar" id="alloc-bar" role="img" aria-label="Allocation by account"></div>
+          <div id="accounts-list"></div>
         </div>
         <div class="card">
-          <p class="card-title"><span id="dash-budget-title">Budget</span></p>
+          <p class="card-title"><span id="dash-budget-title">Spending</span><span class="card-meta">change vs last month</span></p>
+          <div class="budget-total"><span class="mono" id="dash-spend-total">€ 0</span><span class="hero-sub">spent so far</span></div>
           <div id="trending-list"></div>
         </div>
-      </div>
-
-      <div class="card">
-        <p class="card-title">All accounts</p>
-        <div id="accounts-list"></div>
       </div>
     </section>
 
@@ -363,8 +387,8 @@
           Also available here on mobile, where the sidebar footer is hidden to save space.
         </p>
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
-          <button class="add-row-btn" id="settings-lock-btn">🔒 Lock now</button>
-          <button class="add-row-btn theme-toggle-btn">🌙 Dark mode</button>
+          <button class="add-row-btn" id="settings-lock-btn">Lock now</button>
+          <button class="add-row-btn theme-toggle-btn">Dark mode</button>
           <button class="add-row-btn" id="settings-signout-btn">Sign out</button>
         </div>
       </div>
@@ -462,6 +486,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase-config.js"></script>
 <script src="js/plan.js?v=1"></script>
-<script src="js/app.js?v=4"></script>
+<script src="js/app.js?v=5"></script>
 </body>
 </html>
