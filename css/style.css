@@ -1,81 +1,66 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
 /* ============================================================
-   Palette — "aurora ledger": a near-black canvas with a soft
-   blue -> cyan glow mesh behind the glass cards. The glow
-   is the one signature move (hero number, primary chart fills,
-   active nav) — everything else stays quiet so it reads.
-   Green/red are reserved strictly for gains/losses.
+   Konto — flat, quiet finance UI.
+   One blue accent. Green/red are reserved for gains/losses.
+   Surfaces are solid; separation comes from 1px lines, not glow.
    ============================================================ */
 :root {
-  --bg: #f3f2f8;
-  --bg-glow-1: rgba(37,99,235,0.10);
-  --bg-glow-2: rgba(6,182,212,0.08);
-  --bg-glow-3: rgba(56,189,248,0.06);
-  --surface: rgba(255,255,255,0.86);
-  --surface-2: #ecebf3;
-  --surface-solid: #ffffff;
-  --line: #e2dff0;
-  --text: #14121f;
-  --muted: #6b6780;
-  --accent: #2563eb;
-  --accent-dim: #1d4ed8;
-  --accent-soft: #e5edff;
-  --accent-a: #2563eb;
-  --accent-b: #06b6d4;
-  --cyan: #06b6d4;
-  --profit: #16a34a;
-  --loss: #e11d48;
-  --loss-soft: #fde2e7;
-  --profit-soft: #e3f7ea;
-  --highlight: #0891b2;
-  --highlight-soft: #e0f7fb;
-  --highlight-dim: #0e7490;
-  --radius: 14px;
-  --radius-lg: 22px;
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --raised: #f0f2f5;
+  --line: #e4e7ec;
+  --line-strong: #b9c0cc;
+  --text: #14171f;
+  --muted: #5d6677;
+  --accent: #2f5fd0;
+  --accent-soft: rgba(47,95,208,0.10);
+  --on-accent: #ffffff;
+  --profit: #12834f;
+  --loss: #c8322d;
+  --profit-soft: rgba(18,131,79,0.11);
+  --loss-soft: rgba(200,50,45,0.10);
+  --highlight: #2f5fd0;
+  --highlight-soft: rgba(47,95,208,0.09);
+  --highlight-dim: #2f5fd0;
+  --radius: 10px;
+  --radius-lg: 16px;
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
-  --shadow-card: 0 1px 2px rgba(20,18,31,0.04), 0 14px 30px -18px rgba(20,18,31,0.16);
-  --shadow-card-hover: 0 4px 10px rgba(20,18,31,0.06), 0 24px 44px -18px rgba(20,18,31,0.22);
-  --shadow-glow: 0 0 0 1px rgba(37,99,235,0.10), 0 20px 60px -22px rgba(37,99,235,0.35);
+  --shadow-pop: 0 8px 24px rgba(20,23,31,0.14);
+
+  /* aliases kept so older rules and chart code keep working */
+  --surface-2: var(--raised);
+  --surface-solid: var(--surface);
+  --accent-dim: var(--accent);
+  --accent-a: var(--accent);
+  --accent-b: var(--accent);
 }
 :root[data-theme="dark"] {
-  --bg: #07070c;
-  --bg-glow-1: rgba(59,130,246,0.22);
-  --bg-glow-2: rgba(34,211,238,0.14);
-  --bg-glow-3: rgba(56,189,248,0.10);
-  --surface: rgba(255,255,255,0.045);
-  --surface-2: rgba(255,255,255,0.065);
-  --surface-solid: #131120;
-  --line: rgba(255,255,255,0.09);
-  --text: #f3f1fb;
-  --muted: #948fb0;
-  --accent: #60a5fa;
-  --accent-dim: #93c5fd;
-  --accent-soft: rgba(96,165,250,0.16);
-  --accent-a: #3b82f6;
-  --accent-b: #22d3ee;
-  --cyan: #22d3ee;
-  --profit: #34d399;
-  --loss: #fb7185;
-  --loss-soft: rgba(251,113,133,0.14);
-  --profit-soft: rgba(52,211,153,0.14);
-  --highlight: #67e8f9;
-  --highlight-soft: rgba(103,232,249,0.16);
-  --highlight-dim: #a5f3fc;
-  --shadow-card: 0 1px 1px rgba(0,0,0,0.3), 0 1px 0 rgba(255,255,255,0.03) inset;
-  --shadow-card-hover: 0 0 0 1px rgba(255,255,255,0.05) inset, 0 24px 50px -20px rgba(0,0,0,0.6);
-  --shadow-glow: 0 0 0 1px rgba(96,165,250,0.14) inset, 0 30px 70px -26px rgba(59,130,246,0.45);
+  --bg: #0e1014;
+  --surface: #151820;
+  --raised: #1b1f27;
+  --line: #232833;
+  --line-strong: #4a5262;
+  --text: #e9ecf1;
+  --muted: #8b92a0;
+  --accent: #7aa2f7;
+  --accent-soft: rgba(122,162,247,0.14);
+  --on-accent: #0e1014;
+  --profit: #3dd68c;
+  --loss: #f2706b;
+  --profit-soft: rgba(61,214,140,0.12);
+  --loss-soft: rgba(242,112,107,0.12);
+  --highlight: #7aa2f7;
+  --highlight-soft: rgba(122,162,247,0.10);
+  --highlight-dim: #a9c3fa;
+  --shadow-pop: 0 8px 24px rgba(0,0,0,0.5);
+  color-scheme: dark;
 }
 
-/* Category / chart palette — a single warm-to-cool arc (blue through
-   violet, magenta, orange, to red) so multi-series charts read like
-   one gradient ring rather than assorted flat colors. Categorical
-   breakdowns (6-8 spending categories) intentionally stay multi-hued —
-   this is the one place a purple/magenta swatch is still fine, since it's
-   there to distinguish categories from each other, not to brand the app. */
+/* Category palette: muted, distinguishable by lightness as well as hue */
 :root {
-  --cat-0: #3b82f6; --cat-1: #8b5cf6; --cat-2: #d946ef; --cat-3: #ec4899;
-  --cat-4: #f97316; --cat-5: #f59e0b; --cat-6: #22d3ee; --cat-7: #64748b;
+  --cat-0: #7aa2f7; --cat-1: #b392f0; --cat-2: #e0b060; --cat-3: #8a93a6;
+  --cat-4: #5fb3c9; --cat-5: #e58bb0; --cat-6: #8fcb8b; --cat-7: #c9a27e;
 }
 
 * { box-sizing: border-box; }
@@ -85,174 +70,159 @@ html, body {
   min-height: 100vh;
   background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', system-ui, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   font-size: 14px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
-  transition: background 0.25s cubic-bezier(0.4,0,0.2,1), color 0.25s cubic-bezier(0.4,0,0.2,1);
+  transition: background 0.2s var(--ease), color 0.2s var(--ease);
 }
 
-/* The signature move: a fixed aurora mesh behind everything. Subtle in
-   light mode, a real glow in dark mode. Never repeated as a decoration
-   anywhere else in the UI.
+.mono { font-variant-numeric: tabular-nums; }
 
-   This is a fixed-position pseudo-element rather than a `background-attachment:
-   fixed` on body on purpose: mobile browsers (iOS Safari especially, some
-   Android WebViews too) don't reliably honor `background-attachment: fixed` —
-   it silently falls back to `scroll`, which positions the gradient's %-based
-   coordinates against the full scrollable page instead of the viewport. Since
-   the mobile layout is a single tall column, that made the glow (and anything
-   translucent sitting on top of it, like the chart cards) land somewhere
-   completely different than on desktop. A `position: fixed` element is
-   anchored to the viewport everywhere, so it renders identically at any
-   scroll position or screen size. */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background-image:
-    radial-gradient(760px 480px at 14% -6%, var(--bg-glow-1), transparent 60%),
-    radial-gradient(680px 520px at 88% 8%, var(--bg-glow-2), transparent 60%),
-    radial-gradient(900px 620px at 50% 105%, var(--bg-glow-3), transparent 60%);
-  background-repeat: no-repeat;
+button { font-family: inherit; }
+button:focus-visible, a:focus-visible, .nav-item:focus-visible,
+input:focus-visible, select:focus-visible, summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
-
-.mono { font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; }
 
 /* ---------- Layout shell ---------- */
 #app-shell { display: flex; min-height: 100vh; }
 
 .sidebar {
-  width: 224px;
+  width: 240px;
   flex-shrink: 0;
-  background: var(--surface);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: var(--bg);
   border-right: 1px solid var(--line);
-  padding: 28px 18px;
+  padding: 24px 16px;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
 .brand {
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif;
-  font-size: 20px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  margin: 0 0 2px 4px;
-  background: linear-gradient(120deg, var(--accent-a), var(--accent-b));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  width: fit-content;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0;
+  padding: 4px 12px 0 12px;
+  color: var(--text);
+}
+.brand::before {
+  content: "K";
+  width: 32px; height: 32px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: var(--on-accent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 600;
 }
 
 .brand-sub {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  font-weight: 600;
-  margin: 0 0 28px 4px;
+  font-weight: 500;
+  margin: 0 0 24px 0;
+  padding: 0 12px 0 54px;
+  margin-top: -4px;
 }
 
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  border-radius: 980px;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: var(--radius);
   cursor: pointer;
   color: var(--muted);
-  font-size: 13.5px;
-  font-weight: 600;
-  transition: background 0.2s var(--ease), color 0.2s var(--ease);
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.15s var(--ease), color 0.15s var(--ease);
   user-select: none;
 }
-.nav-item + .nav-item { margin-top: 2px; }
-.nav-item .tick { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--line); font-weight: 500; }
-.nav-item:hover { background: var(--surface-2); color: var(--text); }
-.nav-item.active {
-  background: linear-gradient(120deg, var(--accent-a), var(--accent-b));
-  color: #fff;
-  box-shadow: 0 8px 20px -8px rgba(37,99,235,0.6);
+.nav-item svg {
+  width: 20px; height: 20px; flex-shrink: 0;
+  fill: none; stroke: currentColor; stroke-width: 1.8;
+  stroke-linecap: round; stroke-linejoin: round;
 }
-.nav-item.active .tick { color: rgba(255,255,255,0.8); }
+.nav-item:hover { background: var(--raised); color: var(--text); }
+.nav-item.active { background: var(--raised); color: var(--text); }
+.nav-item.active svg { stroke: var(--accent); }
 
 .sidebar-footer {
   margin-top: auto;
-  font-size: 11.5px;
-  color: var(--muted);
-  padding: 0 4px;
+  padding-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
+.rate-line { padding: 0 12px 8px 12px; font-size: 12px; color: var(--muted); }
+.rate-line .mono { color: var(--text); font-weight: 500; }
 .sidebar-footer button {
-  background: none; border: 1px solid var(--line); color: var(--muted);
-  border-radius: 980px; padding: 7px 12px; font-size: 12px; cursor: pointer; width: 100%;
-  margin-top: 10px; transition: border-color 0.2s var(--ease), color 0.2s var(--ease);
+  display: flex; align-items: center;
+  min-height: 44px; padding: 0 12px;
+  border: none; border-radius: var(--radius);
+  background: transparent; color: var(--muted);
+  font-size: 14px; font-weight: 500; text-align: left; cursor: pointer;
+  transition: background 0.15s var(--ease), color 0.15s var(--ease);
 }
-.sidebar-footer button:hover { border-color: var(--accent); color: var(--accent-dim); }
+.sidebar-footer button:hover { background: var(--raised); color: var(--text); }
 
 main {
   flex: 1;
-  padding: 44px 48px;
+  min-width: 0;
+  padding: 32px 40px 56px 40px;
   max-width: 1280px;
 }
 
 .view { display: none; }
 .view.active { display: block; }
 
-.view-header { margin-bottom: 32px; }
+.view-header { margin-bottom: 24px; }
 .view-header h1 {
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif;
-  font-weight: 800;
-  font-size: 32px;
-  letter-spacing: -0.03em;
-  margin: 0 0 6px 0;
+  font-weight: 600;
+  font-size: 28px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  margin: 0 0 4px 0;
   color: var(--text);
 }
-.view-header p { color: var(--muted); margin: 0; font-size: 14.5px; }
+.view-header p { color: var(--muted); margin: 0; font-size: 14px; }
 
 /* ---------- Cards / ledger tables ---------- */
 .card {
   background: var(--surface);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  padding: 26px 28px;
-  margin-bottom: 22px;
-  box-shadow: var(--shadow-card);
-  transition: box-shadow 0.25s var(--ease), border-color 0.25s var(--ease);
+  padding: 24px 28px;
+  margin-bottom: 20px;
 }
-.card:hover { border-color: color-mix(in srgb, var(--line) 50%, var(--accent)); }
 
 .card-title {
-  font-size: 13px;
-  letter-spacing: -0.005em;
+  font-size: 15px;
   color: var(--text);
-  font-weight: 700;
-  margin: 0 0 18px 0;
+  font-weight: 600;
+  margin: 0 0 16px 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
   gap: 8px 12px;
 }
+.card-meta { font-size: 13px; font-weight: 400; color: var(--muted); }
 
 .card-title select {
-  background: var(--surface-2);
+  background: var(--raised);
   border: 1px solid var(--line);
-  border-radius: 980px;
+  border-radius: 8px;
   color: var(--text);
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: none;
-  letter-spacing: normal;
-  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 10px;
   flex-shrink: 0;
   min-width: 140px;
   max-width: 200px;
@@ -270,32 +240,33 @@ table.ledger {
 }
 table.ledger.wide-8 { min-width: 720px; }
 table.ledger.wide-cash { min-width: 480px; }
-table.ledger.wide-months { min-width: 1080px; }
+/* wider than before: leaves room for the number and the note icon in each month cell */
+table.ledger.wide-months { min-width: 1240px; }
 
 table.ledger th {
   text-align: right;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-size: 12px;
   color: var(--muted);
-  font-weight: 700;
+  font-weight: 500;
   padding: 0 10px 10px 10px;
   border-bottom: 1px solid var(--line);
 }
 table.ledger th:first-child, table.ledger td:first-child { text-align: left; }
 table.ledger td {
-  padding: 10px;
+  padding: 8px 10px;
   border-bottom: 1px solid var(--line);
   text-align: right;
   font-size: 13px;
 }
+table.ledger tbody tr:hover td { background: var(--raised); }
 table.ledger tr:last-child td { border-bottom: none; }
 table.ledger tr.total-row td {
-  border-top: 2px solid var(--line);
+  border-top: 1px solid var(--line-strong);
   border-bottom: none;
-  font-weight: 700;
+  font-weight: 600;
   padding-top: 12px;
   color: var(--text);
+  background: transparent;
 }
 table.ledger input {
   width: 100%;
@@ -304,51 +275,69 @@ table.ledger input {
   border-bottom: 1px dashed transparent;
   color: var(--text);
   text-align: right;
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: inherit;
   font-variant-numeric: tabular-nums;
   font-size: 13px;
   padding: 3px 0;
 }
-table.ledger input:hover { border-bottom-color: var(--line); }
+table.ledger input:hover { border-bottom-color: var(--line-strong); }
 table.ledger input:focus { outline: none; border-bottom-color: var(--accent); }
-table.ledger input.name-input { text-align: left; font-family: 'Inter', sans-serif; font-weight: 500; }
+table.ledger input.name-input { text-align: left; font-weight: 500; }
 table.ledger select {
-  background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px;
-  color: var(--text); font-family: 'IBM Plex Mono', monospace; font-size: 12px; padding: 3px 4px;
+  background: var(--raised); border: 1px solid var(--line); border-radius: 6px;
+  color: var(--text); font-family: inherit; font-size: 12px; padding: 3px 4px;
+}
+
+/* Number inputs: hide the browser's up/down arrows. They were drawn on top of
+   the right-aligned digits in narrow cells (Spending grid). Typing still works. */
+table.ledger input[type="number"],
+.quick-add-row input[type="number"],
+.plan-form input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+table.ledger input[type="number"]::-webkit-outer-spin-button,
+table.ledger input[type="number"]::-webkit-inner-spin-button,
+.quick-add-row input[type="number"]::-webkit-outer-spin-button,
+.quick-add-row input[type="number"]::-webkit-inner-spin-button,
+.plan-form input[type="number"]::-webkit-outer-spin-button,
+.plan-form input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 .pos { color: var(--profit); }
 .neg { color: var(--loss); }
 .muted-cell { color: var(--muted); }
 
-/* "Valoare port" highlight — makes it visually distinct from investitie so it's
-   harder to type a value into the wrong field without noticing */
+/* "Valoare port" highlight keeps it distinct from investitie */
 table.ledger th.col-highlight { color: var(--highlight-dim); }
-table.ledger td.col-highlight { background: var(--highlight-soft); border-radius: 6px; }
-table.ledger td.col-highlight input { color: var(--highlight-dim); font-weight: 700; }
-table.ledger td.col-highlight input:focus { border-bottom-color: var(--highlight); }
+table.ledger td.col-highlight { background: var(--highlight-soft); }
+table.ledger tbody tr:hover td.col-highlight { background: var(--highlight-soft); }
+table.ledger td.col-highlight input { color: var(--highlight-dim); font-weight: 600; }
+table.ledger td.col-highlight input:focus { border-bottom-color: var(--accent); }
 
 .row-actions { width: 28px; }
 .icon-btn {
   background: none; border: none; color: var(--muted); cursor: pointer;
-  font-size: 14px; padding: 2px 6px; border-radius: 4px;
+  font-size: 14px; padding: 4px 8px; border-radius: 6px;
 }
 .icon-btn:hover { color: var(--loss); background: var(--loss-soft); }
 
 .add-row-btn {
   margin-top: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 4px;
   background: none;
-  border: 1px dashed var(--line);
+  border: 1px solid var(--line);
   color: var(--muted);
-  border-radius: 980px;
-  padding: 8px 16px;
-  font-size: 12.5px;
-  font-weight: 600;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
-  transition: border-color 0.2s var(--ease), color 0.2s var(--ease);
+  transition: border-color 0.15s var(--ease), color 0.15s var(--ease), background 0.15s var(--ease);
 }
-.add-row-btn:hover { border-color: var(--accent); color: var(--accent-dim); }
+.add-row-btn:hover { border-color: var(--line-strong); color: var(--text); background: var(--raised); }
 
 /* ---------- Quick add spending ---------- */
 .quick-add-row {
@@ -360,16 +349,16 @@ table.ledger td.col-highlight input:focus { border-bottom-color: var(--highlight
 .quick-add-row select,
 .quick-add-row input[type="number"],
 .quick-add-row input[type="text"] {
-  background: var(--surface-2);
+  background: var(--raised);
   border: 1px solid var(--line);
-  border-radius: 980px;
+  border-radius: 8px;
   color: var(--text);
-  padding: 9px 14px;
+  padding: 9px 12px;
   font-size: 13px;
+  font-family: inherit;
 }
-.quick-add-row select { font-family: 'Inter', sans-serif; }
-.quick-add-row input[type="number"] { font-family: 'IBM Plex Mono', monospace; width: 120px; }
-.quick-add-row input[type="text"] { flex: 1; min-width: 160px; font-family: 'Inter', sans-serif; border-radius: 980px; }
+.quick-add-row input[type="number"] { width: 120px; }
+.quick-add-row input[type="text"] { flex: 1; min-width: 160px; }
 .quick-add-row select:focus, .quick-add-row input:focus { outline: none; border-color: var(--accent); }
 .quick-add-row .save-btn { flex-shrink: 0; }
 
@@ -378,73 +367,127 @@ table.ledger td.col-highlight input:focus { border-bottom-color: var(--highlight
   .quick-add-row input[type="number"] { width: 100%; }
 }
 
-/* ---------- Summary/stat cards row ---------- */
-.stat-row { display: flex; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
-.stat-card {
-  flex: 1; min-width: 180px;
-  background: var(--surface);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+/* ---------- Stat strip ---------- */
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: 1px;
+  background: var(--line);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  padding: 20px 22px;
-  box-shadow: var(--shadow-card);
-  transition: transform 0.2s var(--ease), border-color 0.2s var(--ease);
-}
-.stat-card:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--line) 50%, var(--accent)); }
-.stat-label { font-size: 12px; color: var(--muted); font-weight: 600; margin-bottom: 8px; }
-.stat-value { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; }
-/* Numeric grids stay tabular mono; standalone stat/hero figures read as a
-   confident rounded sans, closer to the big-number "hero" treatment. */
-.stat-value.mono, .hero-value.mono { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif; }
-
-/* ---------- Dashboard-specific ---------- */
-.hero-card {
-  position: relative;
   overflow: hidden;
-  background-color: var(--surface);
-  background-image: radial-gradient(480px 360px at -6% -60%, var(--bg-glow-1), transparent 70%);
-  background-repeat: no-repeat;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  color: var(--text);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  padding: 30px 32px;
-  margin-bottom: 22px;
-  box-shadow: var(--shadow-glow);
+  margin-bottom: 20px;
+}
+.stat-card {
+  background: var(--surface);
+  padding: 18px 24px;
+}
+.stat-label { font-size: 13px; color: var(--muted); font-weight: 500; margin-bottom: 6px; }
+.stat-value { font-size: 24px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.25; }
+.stat-sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+/* A stat row inside a card (Plan vs actual) sits flush, without double borders */
+.card .stat-row { margin-bottom: 20px; }
+
+/* ---------- Net worth block ---------- */
+.nw-card { padding: 28px; }
+.nw-top {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  gap: 24px;
+  align-items: flex-start;
+  gap: 20px;
   flex-wrap: wrap;
 }
-.hero-label { font-size: 12px; color: var(--muted); font-weight: 600; margin-bottom: 8px; }
+.hero-label { font-size: 13px; color: var(--muted); font-weight: 500; }
 .hero-value {
-  font-size: 48px;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  background: linear-gradient(120deg, var(--text), var(--accent-a) 120%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  font-size: 44px;
+  line-height: 1.1;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  margin-top: 4px;
+  color: var(--text);
 }
-.hero-sub { font-size: 13px; color: var(--muted); margin-top: 6px; }
-.hero-sparkline { width: 220px; height: 70px; flex-shrink: 0; }
+.nw-delta-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 12px; }
+.nw-delta { font-size: 13px; font-weight: 600; padding: 4px 10px; border-radius: 999px; }
+.nw-delta:empty { display: none; }
+.nw-delta.pos { background: var(--profit-soft); }
+.nw-delta.neg { background: var(--loss-soft); }
+.hero-sub { font-size: 13px; color: var(--muted); }
+#hero-net-worth-ron { margin-top: 8px; }
 
+.range-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.range-tab {
+  min-width: 44px;
+  height: 36px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s var(--ease), color 0.15s var(--ease);
+}
+.range-tab:hover { color: var(--text); }
+.range-tab.active { background: var(--line); color: var(--text); }
+
+.chart-wrap-nw { height: 300px; margin-top: 24px; }
+
+/* ---------- Dashboard ---------- */
 .dashboard-grid {
   display: grid;
-  grid-template-columns: 1.1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
   gap: 20px;
   align-items: start;
 }
-@media (max-width: 980px) { .dashboard-grid { grid-template-columns: 1fr; } }
+.dashboard-grid .card { margin-bottom: 0; }
+
+.alloc-bar {
+  display: flex;
+  gap: 2px;
+  height: 12px;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+.alloc-seg { display: block; min-width: 2px; }
+.alloc-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 0; border-top: 1px solid var(--line);
+}
+.alloc-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.alloc-name { flex: 1; min-width: 0; font-weight: 500; }
+.alloc-name > div:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.alloc-amount { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.alloc-sub { font-size: 12px; font-weight: 400; color: var(--muted); }
+
+.budget-total { display: flex; align-items: baseline; gap: 10px; margin: -4px 0 12px 0; }
+.budget-total .mono { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; }
+.budget-row {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px;
+  padding: 12px 0; border-top: 1px solid var(--line);
+}
+.budget-name { flex: 1 1 110px; font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.budget-bar { flex: 2 1 120px; height: 6px; border-radius: 3px; background: var(--line); }
+.budget-bar span { display: block; height: 6px; border-radius: 3px; background: var(--accent); }
+.budget-amount { width: 72px; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.budget-delta { width: 48px; text-align: right; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.budget-delta.up { color: var(--loss); }
+.budget-delta.down { color: var(--profit); }
 
 .cat-pill {
   display: inline-flex; align-items: center; gap: 6px;
-  font-size: 11.5px; font-weight: 700; padding: 4px 10px; border-radius: 980px;
+  font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px;
 }
-.cat-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 18%, transparent); }
+.cat-dot { width: 9px; height: 9px; border-radius: 3px; flex-shrink: 0; }
 
 .trend-row, .activity-row {
   display: flex; align-items: center; justify-content: space-between;
@@ -453,22 +496,22 @@ table.ledger td.col-highlight input:focus { border-bottom-color: var(--highlight
 }
 .trend-row:last-child, .activity-row:last-child { border-bottom: none; }
 .trend-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.trend-name { font-weight: 600; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trend-name { font-weight: 500; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .trend-right { text-align: right; flex-shrink: 0; }
-.trend-amount { font-family: 'IBM Plex Mono', monospace; font-weight: 600; font-size: 13.5px; }
-.trend-delta { font-size: 11px; font-weight: 600; }
+.trend-amount { font-weight: 600; font-size: 14px; font-variant-numeric: tabular-nums; }
+.trend-delta { font-size: 12px; font-weight: 500; }
 .trend-delta.up { color: var(--loss); }
 .trend-delta.down { color: var(--profit); }
 
 .activity-icon {
-  width: 34px; height: 34px; border-radius: 12px; flex-shrink: 0;
+  width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
-  font-size: 15px; background: var(--surface-2); color: var(--muted);
+  font-size: 15px; background: var(--raised); color: var(--muted);
 }
 .activity-main { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .activity-text { min-width: 0; }
-.activity-title { font-size: 13.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.activity-time { font-size: 11.5px; color: var(--muted); }
+.activity-title { font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.activity-time { font-size: 12px; color: var(--muted); }
 .empty-state { color: var(--muted); font-size: 13px; padding: 8px 0; }
 
 .device-row {
@@ -476,12 +519,12 @@ table.ledger td.col-highlight input:focus { border-bottom-color: var(--highlight
   padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 13px;
 }
 .device-row:last-child { border-bottom: none; }
-.device-row .device-name { font-weight: 600; }
-.device-row .device-date { color: var(--muted); font-size: 11.5px; }
+.device-row .device-name { font-weight: 500; }
+.device-row .device-date { color: var(--muted); font-size: 12px; }
 
 .confirm-input {
-  width: 100%; background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px;
-  color: var(--text); padding: 9px 11px; font-size: 13px; font-family: 'IBM Plex Mono', monospace;
+  width: 100%; background: var(--raised); border: 1px solid var(--line); border-radius: 8px;
+  color: var(--text); padding: 9px 11px; font-size: 13px; font-family: inherit;
 }
 .confirm-input:focus { outline: none; border-color: var(--loss); }
 
@@ -489,144 +532,128 @@ table.ledger td.col-highlight input:focus { border-bottom-color: var(--highlight
 .field-row { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
 .field-row label { width: 160px; color: var(--muted); font-size: 13px; }
 .field-row input {
-  background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px;
-  color: var(--text); padding: 8px 10px; font-family: 'IBM Plex Mono', monospace;
+  background: var(--raised); border: 1px solid var(--line); border-radius: 8px;
+  color: var(--text); padding: 8px 10px; font-family: inherit;
   width: 140px; font-size: 13px;
 }
 .field-row input:focus { outline: none; border-color: var(--accent); }
 
 .save-btn {
-  background: linear-gradient(120deg, var(--accent-a), var(--accent-b));
-  color: #fff; border: none; border-radius: 980px;
-  padding: 10px 22px; font-weight: 700; font-size: 13px; cursor: pointer;
-  transition: filter 0.2s var(--ease), transform 0.2s var(--ease);
-  box-shadow: 0 8px 20px -10px rgba(37,99,235,0.7);
+  background: var(--accent);
+  color: var(--on-accent); border: none; border-radius: 8px;
+  padding: 10px 20px; font-weight: 600; font-size: 13px; cursor: pointer;
+  transition: filter 0.15s var(--ease);
 }
-.save-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+.save-btn:hover { filter: brightness(1.1); }
 
-.save-hint { font-size: 11.5px; color: var(--muted); margin-left: 10px; }
+.save-hint { font-size: 12px; color: var(--muted); margin-left: 10px; }
 
 /* ---------- Auth screen ---------- */
 #auth-screen, #lock-screen {
   min-height: 100vh; display: flex; align-items: center; justify-content: center;
-  background: transparent;
+  background: var(--bg);
 }
 .auth-box {
   background: var(--surface);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid var(--line); border-radius: 26px;
-  padding: 44px 38px; width: 340px; text-align: center;
-  box-shadow: var(--shadow-glow);
+  border: 1px solid var(--line); border-radius: 20px;
+  padding: 40px 36px; width: 340px; max-width: calc(100vw - 32px); text-align: center;
 }
-.auth-box .brand { font-size: 27px; margin: 0 auto 4px; }
-.auth-box .brand-sub { margin-bottom: 24px; }
+.auth-box .brand { justify-content: center; padding: 0; margin: 0 auto 4px; }
+.auth-box .brand-sub { margin: 0 0 24px 0; padding: 0; }
 .auth-box button {
   width: 100%;
-  background: linear-gradient(120deg, var(--accent-a), var(--accent-b));
-  color: #fff; border: none; border-radius: 980px;
-  padding: 11px; font-weight: 700; font-size: 13.5px; cursor: pointer; margin-top: 4px;
-  transition: filter 0.2s var(--ease), transform 0.2s var(--ease);
-  box-shadow: 0 8px 20px -10px rgba(37,99,235,0.7);
+  background: var(--accent);
+  color: var(--on-accent); border: none; border-radius: 10px;
+  min-height: 44px; font-weight: 600; font-size: 14px; cursor: pointer; margin-top: 4px;
+  transition: filter 0.15s var(--ease);
 }
-.auth-box button:hover { transform: translateY(-1px); }
+.auth-box button:hover { filter: brightness(1.1); }
 .google-btn {
   display: flex; align-items: center; justify-content: center; gap: 10px;
-  background: var(--surface-2) !important; color: var(--text) !important;
-  border: 1px solid var(--line) !important; box-shadow: none !important;
-  transition: border-color 0.2s var(--ease);
+  background: var(--raised) !important; color: var(--text) !important;
+  border: 1px solid var(--line) !important;
 }
-.google-btn:hover { border-color: var(--accent) !important; }
-.auth-msg { font-size: 12.5px; color: var(--muted); margin-top: 14px; min-height: 16px; }
+.google-btn:hover { border-color: var(--line-strong) !important; filter: none !important; }
+.auth-msg { font-size: 13px; color: var(--muted); margin-top: 14px; min-height: 16px; }
 
 /* ---------- Charts ---------- */
 .chart-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
   gap: 20px;
   align-items: start;
 }
 .chart-grid-secondary { margin-top: 20px; }
 .chart-card { margin-bottom: 0; }
 .chart-wrap { position: relative; height: 260px; }
-
-/* Trend charts (income/expenses, net worth) get their own full-width row —
-   time series read better with the extra horizontal room, rather than being
-   squeezed into a third of the row alongside the breakdown donuts. */
-.chart-card-wide { margin-bottom: 22px; }
+.chart-card-wide { margin-bottom: 20px; }
 .chart-wrap-wide { height: 280px; }
 
-/* Rich legend rows (dot, name, amount, share) under the donut charts —
-   replaces Chart.js's built-in legend so the breakdown reads like a real
-   list instead of a row of tiny colored dots. */
 .legend-list { margin-top: 16px; }
 .legend-row {
   display: flex; align-items: center; gap: 10px;
   padding: 10px 0; border-bottom: 1px solid var(--line);
 }
 .legend-row:last-child { border-bottom: none; }
-.legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-.legend-name { flex: 1; min-width: 0; font-weight: 600; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.legend-amount { color: var(--muted); font-size: 12.5px; }
-.legend-pct {
-  min-width: 42px; text-align: right; font-weight: 800; font-size: 13px;
-  color: var(--text);
-}
+.legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.legend-name { flex: 1; min-width: 0; font-weight: 500; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.legend-amount { color: var(--muted); font-size: 13px; }
+.legend-pct { min-width: 42px; text-align: right; font-weight: 600; font-size: 13px; color: var(--text); }
 
 /* ---------- Spending notes ---------- */
-.cell-wrap { display: flex; align-items: center; gap: 4px; }
-.cell-wrap input { flex: 1; min-width: 0; }
+.cell-wrap { display: flex; align-items: center; gap: 6px; }
+.cell-wrap input { flex: 1; min-width: 0; padding-right: 2px; }
 .note-icon {
   flex-shrink: 0; width: 18px; height: 18px; border: none; background: none;
-  color: var(--line); cursor: pointer; font-size: 12px; border-radius: 50%;
+  color: var(--line-strong); cursor: pointer; font-size: 12px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  transition: color 0.2s var(--ease);
+  transition: color 0.15s var(--ease);
 }
-.note-icon:hover { color: var(--muted); }
+.note-icon:hover { color: var(--text); }
 .note-icon.has-note { color: var(--accent); }
 
 .note-popover {
   position: fixed;
   width: 220px;
-  background: var(--surface-solid);
+  background: var(--raised);
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 12px;
-  box-shadow: var(--shadow-card-hover);
+  box-shadow: var(--shadow-pop);
   z-index: 1000;
 }
 .note-popover textarea {
   width: 100%; min-height: 64px; resize: vertical;
-  background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px;
-  color: var(--text); padding: 8px; font-size: 12.5px; font-family: 'Inter', sans-serif;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
+  color: var(--text); padding: 8px; font-size: 13px; font-family: inherit;
 }
 .note-popover textarea:focus { outline: none; border-color: var(--accent); }
 .note-popover .note-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
 .note-popover button {
-  border: none; border-radius: 980px; padding: 5px 12px; font-size: 11.5px; cursor: pointer; font-weight: 600;
+  border: none; border-radius: 8px; padding: 6px 12px; font-size: 12px; cursor: pointer; font-weight: 600;
 }
-.note-popover .note-save { background: var(--accent); color: #fff; }
+.note-popover .note-save { background: var(--accent); color: var(--on-accent); }
 .note-popover .note-close { background: none; color: var(--muted); }
 
 /* ---------- Undo toast ---------- */
 .undo-toast {
   position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-  background: var(--surface-solid); color: var(--text); border: 1px solid var(--line);
-  padding: 12px 18px; border-radius: 980px;
+  background: var(--raised); color: var(--text); border: 1px solid var(--line);
+  padding: 10px 12px 10px 18px; border-radius: 12px;
   display: flex; align-items: center; gap: 14px; font-size: 13px; z-index: 2000;
-  box-shadow: var(--shadow-card-hover);
+  box-shadow: var(--shadow-pop);
   max-width: calc(100vw - 32px);
 }
 .undo-toast span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .undo-toast .undo-btn {
-  background: linear-gradient(120deg, var(--accent-a), var(--accent-b));
-  color: #fff; border: none; border-radius: 980px;
-  padding: 5px 12px; font-weight: 700; cursor: pointer; flex-shrink: 0;
+  background: var(--accent);
+  color: var(--on-accent); border: none; border-radius: 8px;
+  padding: 6px 12px; font-weight: 600; cursor: pointer; flex-shrink: 0;
 }
 
 /* ---------- Mobile month nav (spending view) ---------- */
 .mobile-month-nav { display: none; align-items: center; justify-content: center; gap: 16px; margin-bottom: 14px; }
-#mobile-month-label { font-size: 14px; font-weight: 700; min-width: 40px; text-align: center; }
+#mobile-month-label { font-size: 14px; font-weight: 600; min-width: 40px; text-align: center; }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
@@ -637,82 +664,67 @@ table.ledger td.col-highlight input:focus { border-bottom-color: var(--highlight
 
 @media (max-width: 820px) {
   #app-shell { flex-direction: column; }
-  .sidebar { width: auto; flex-direction: row; overflow-x: auto; padding: 14px; border-right: none; border-bottom: 1px solid var(--line); }
+  .sidebar { width: auto; flex-direction: row; overflow-x: auto; padding: 10px 12px; border-right: none; border-bottom: 1px solid var(--line); }
   .brand, .brand-sub, .sidebar-footer { display: none; }
-  main { padding: 22px 16px; }
-  .stat-row { flex-direction: column; }
+  .nav-item { white-space: nowrap; flex-shrink: 0; }
+  main { padding: 20px 16px 40px 16px; }
   .card { padding: 20px 18px; }
-  table.ledger td, table.ledger th { padding: 11px 8px; }
+  .nw-card { padding: 22px 18px; }
+  .stat-card { padding: 16px 18px; }
+  table.ledger td, table.ledger th { padding: 10px 8px; }
   table.ledger input, table.ledger select { font-size: 14px; }
   .icon-btn { font-size: 16px; padding: 6px 10px; }
   .chart-wrap { height: 240px; }
   .chart-wrap-wide { height: 220px; }
-  .chart-grid { grid-template-columns: 1fr; }
-
-  /* Give the net-worth figure the big, centered "hero" treatment your
-     reference screens use, instead of the desktop's left-aligned label/value
-     pair sitting next to a small sparkline. */
-  .hero-card { flex-direction: column; align-items: center; text-align: center; padding: 32px 24px; }
-  .hero-value { font-size: 46px; }
-  .hero-sparkline { width: 100%; height: 90px; }
-
-  /* Stat numbers read small next to the hero figure on a narrow screen —
-     bump them up so Income/Expenses/P&L still feel like headline numbers. */
-  .stat-value { font-size: 26px; }
+  .chart-wrap-nw { height: 240px; }
+  .hero-value { font-size: 38px; }
+  .view-header h1 { font-size: 24px; }
 }
 
-/* ---------- Mobile: brokers & cash tables become cards (no more sideways scroll) ---------- */
+/* ---------- Mobile: brokers & cash tables become cards ---------- */
 @media (max-width: 640px) {
   table.ledger.wide-8 thead, table.ledger.wide-cash thead { display: none; }
   table.ledger.wide-8 tr, table.ledger.wide-cash tr {
-    display: block; border: 1px solid var(--line); border-radius: 14px;
-    margin-bottom: 10px; padding: 4px 14px; background: var(--surface-solid);
+    display: block; border: 1px solid var(--line); border-radius: 12px;
+    margin-bottom: 10px; padding: 4px 14px; background: var(--raised);
   }
-  table.ledger.wide-8 tr.total-row, table.ledger.wide-cash tr.total-row { border-color: var(--muted); }
+  table.ledger.wide-8 tr.total-row, table.ledger.wide-cash tr.total-row { border-color: var(--line-strong); }
   table.ledger.wide-8 td, table.ledger.wide-cash td {
     display: flex; justify-content: space-between; align-items: center;
     border-bottom: 1px dashed var(--line); padding: 9px 0; text-align: right;
   }
   table.ledger.wide-8 td:last-child, table.ledger.wide-cash td:last-child { border-bottom: none; }
   table.ledger.wide-8 td::before, table.ledger.wide-cash td::before {
-    content: attr(data-label); color: var(--muted); font-size: 11px;
-    text-transform: uppercase; letter-spacing: 0.06em; text-align: left; font-weight: 700;
+    content: attr(data-label); color: var(--muted); font-size: 12px;
+    text-align: left; font-weight: 500;
   }
   table.ledger.wide-8 td.col-highlight, table.ledger.wide-cash td.col-highlight {
     margin: 0 -10px; padding: 9px 10px; border-radius: 8px; border-bottom: none;
   }
   table.ledger.wide-8 td.row-actions, table.ledger.wide-cash td.row-actions { justify-content: flex-end; }
   table.ledger.wide-8 td.row-actions::before, table.ledger.wide-cash td.row-actions::before { content: none; }
-  /* colspan doesn't apply once rows go flex, so totals rows leave blank placeholder
-     cells (Randament/P&L on the broker total row) — hide any cell that's truly empty */
   table.ledger.wide-8 td:empty, table.ledger.wide-cash td:empty { display: none; }
-
-  /* the desktop min-width was still forcing horizontal scroll even after rows
-     became cards — drop it so cards fill the actual screen width */
   table.ledger.wide-8, table.ledger.wide-cash { min-width: 0; width: 100%; }
 
-  /* Spending tracker: show one month at a time instead of a 12-col scroller */
   .mobile-month-nav { display: flex; }
   table.ledger.wide-months { min-width: 0; }
+  .range-tabs { width: 100%; }
+  .range-tab { flex: 1; }
 }
 
 /* Insights + account rows */
-.insight-row { display:flex; gap:10px; align-items:flex-start; padding:11px 0; border-bottom:1px solid var(--line); font-size:13.5px; }
+.insight-row { display:flex; gap:10px; align-items:flex-start; padding:11px 0; border-bottom:1px solid var(--line); font-size:14px; }
 .insight-row:last-child { border-bottom:none; }
 .insight-dot { width:8px; height:8px; border-radius:50%; margin-top:7px; flex-shrink:0; background:var(--accent); }
 .insight-dot.good { background:var(--profit); }
 .insight-dot.bad { background:var(--loss); }
-.hero-change { font-weight:700; }
-.acct-share { color:var(--muted); font-size:11px; font-weight:600; }
-
-/* Append to the end of css/style.css */
-
-/* Append to the end of css/style.css */
+.hero-change { font-weight:600; }
+.acct-share { color:var(--muted); font-size:12px; font-weight:500; }
 
 /* ---------- Plan vs actual ---------- */
 .plan-settings { margin-bottom: 18px; }
 .plan-settings summary {
-  cursor: pointer; color: var(--muted); font-size: 12.5px; font-weight: 600;
+  cursor: pointer; color: var(--muted); font-size: 13px; font-weight: 500;
   padding: 4px 0;
 }
 .plan-settings summary:hover { color: var(--text); }
@@ -724,14 +736,14 @@ table.ledger td.col-highlight input:focus { border-bottom-color: var(--highlight
 }
 .plan-form label {
   display: flex; flex-direction: column; gap: 5px;
-  font-size: 11.5px; color: var(--muted); font-weight: 600;
+  font-size: 12px; color: var(--muted); font-weight: 500;
 }
 .plan-form input {
-  background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px;
-  color: var(--text); padding: 8px 10px; font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+  background: var(--raised); border: 1px solid var(--line); border-radius: 8px;
+  color: var(--text); padding: 8px 10px; font-family: inherit; font-size: 13px;
 }
 .plan-form input:focus { outline: none; border-color: var(--accent); }
-.plan-note { font-size: 11.5px; color: var(--muted); font-weight: 500; }
+.plan-note { font-size: 12px; color: var(--muted); font-weight: 400; }
 
 table.ledger input[type="checkbox"] {
   width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer;
@@ -740,13 +752,12 @@ table.ledger.wide-plan { min-width: 780px; }
 table.ledger.wide-plan td:nth-child(2),
 table.ledger.wide-plan th:nth-child(2) { text-align: center; width: 56px; }
 
-/* Mobile: each month becomes a small card, same pattern as the brokers table */
 @media (max-width: 640px) {
   table.ledger.wide-plan { min-width: 0; width: 100%; }
   table.ledger.wide-plan thead { display: none; }
   table.ledger.wide-plan tr {
-    display: block; border: 1px solid var(--line); border-radius: 14px;
-    margin-bottom: 10px; padding: 4px 14px; background: var(--surface-solid);
+    display: block; border: 1px solid var(--line); border-radius: 12px;
+    margin-bottom: 10px; padding: 4px 14px; background: var(--raised);
   }
   table.ledger.wide-plan td {
     display: flex; justify-content: space-between; align-items: center;
@@ -754,22 +765,21 @@ table.ledger.wide-plan th:nth-child(2) { text-align: center; width: 56px; }
   }
   table.ledger.wide-plan td:last-child { border-bottom: none; }
   table.ledger.wide-plan td::before {
-    content: attr(data-label); color: var(--muted); font-size: 11px;
-    text-transform: uppercase; letter-spacing: 0.06em; text-align: left; font-weight: 700;
+    content: attr(data-label); color: var(--muted); font-size: 12px;
+    text-align: left; font-weight: 500;
   }
   table.ledger.wide-plan td:nth-child(2) { text-align: right; width: auto; }
   table.ledger.wide-plan td input[type="number"] { width: 55%; }
 }
 
-/* Amount changes row: date and amount inputs styled like the other pill inputs */
 #plan-card .quick-add-row input[type="date"] {
-  background: var(--surface-2);
+  background: var(--raised);
   border: 1px solid var(--line);
-  border-radius: 980px;
+  border-radius: 8px;
   color: var(--text);
-  padding: 9px 14px;
+  padding: 9px 12px;
   font-size: 13px;
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: inherit;
 }
 #plan-card .quick-add-row input[type="date"]:focus { outline: none; border-color: var(--accent); }
 #plan-card .quick-add-row input[type="number"] { width: 230px; }
