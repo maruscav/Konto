@@ -18,7 +18,8 @@ let state = {
   brokerSnapshots: [],
   webauthnCredentials: [],
   pension: [],
-  pension3: []
+  pension3: [],
+  heroRange: 'ALL'
 };
 
 let pensionCharts = {};
@@ -343,14 +344,46 @@ function portfolioTotals() {
   return { inv, val, cash, ron, gain: val - inv, gainPct: inv ? (val - inv) / inv * 100 : 0 };
 }
 
-// % change vs. the latest snapshot that is at least 30 days old (or the first one)
-function netWorthChange(now) {
-  const s = state.netWorth;
-  if (s.length < 2) return null;
-  const cutoff = Date.now() - 30 * 864e5;
-  const base = [...s].reverse().find(p => new Date(p.snapshot_date) <= cutoff) || s[0];
-  const b = Number(base.total_eur);
-  return b ? (now - b) / b * 100 : null;
+// ---------------- Net worth range helpers ----------------
+
+const RANGE_DAYS = { '1M': 30, '3M': 91, '6M': 182, '1Y': 365 };
+const RANGE_LABELS = {
+  '1M': 'past month', '3M': 'past 3 months', '6M': 'past 6 months',
+  '1Y': 'past 12 months', 'ALL': 'since the first snapshot'
+};
+
+// Points for the net worth chart in the selected range. When a snapshot exists
+// from before the range starts, it becomes the starting value so the line
+// begins at the edge of the range instead of mid-way.
+function netWorthRangePoints() {
+  const all = state.netWorth.map(p => ({ x: new Date(p.snapshot_date).getTime(), y: Number(p.total_eur) }));
+  const days = RANGE_DAYS[state.heroRange];
+  if (!days || !all.length) return all;
+  const cutoff = Date.now() - days * 864e5;
+  const inRange = all.filter(p => p.x >= cutoff);
+  if (!inRange.length) return [all[all.length - 1]];
+  const before = [...all].reverse().find(p => p.x < cutoff);
+  return before ? [{ x: cutoff, y: before.y }, ...inRange] : inRange;
+}
+
+function netWorthRangeChange(pts) {
+  if (pts.length < 2) return null;
+  const first = pts[0].y, last = pts[pts.length - 1].y;
+  return { abs: last - first, pct: first ? (last - first) / first * 100 : null };
+}
+
+function withAlpha(hex, alpha) {
+  const h = String(hex).replace('#', '').trim();
+  const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+  const n = parseInt(full, 16) || 0;
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+}
+
+function compactEUR(v) {
+  const a = Math.abs(v);
+  if (a >= 1e6) return '€ ' + (v / 1e6).toFixed(1).replace(/\.0$/, '') + 'M';
+  if (a >= 1e3) return '€ ' + (v / 1e3).toFixed(a >= 1e5 ? 0 : 1).replace(/\.0$/, '') + 'k';
+  return '€ ' + Math.round(v);
 }
 
 function categoryTotalForMonth(month) {
@@ -580,6 +613,7 @@ async function snapshotNetWorth(totalEUR) {
     const idx = state.netWorth.findIndex(s => s.snapshot_date === today);
     if (idx >= 0) state.netWorth[idx] = data; else state.netWorth.push(data);
     renderNetWorthChart();
+    renderHero();
   }
 }
 
@@ -756,64 +790,65 @@ function renderDashboard() {
   const h = new Date().getHours();
   $('greeting').textContent = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
 
-  $('hero-net-worth').textContent = fmt0(netWorth);
-  $('hero-net-worth-ron').textContent = '· ' + fmt(netWorth * state.rate) + ' RON';
-  const ch = netWorthChange(netWorth);
-  const chEl = $('hero-change');
-  chEl.className = 'hero-change ' + (ch === null ? '' : ch >= 0 ? 'pos' : 'neg');
-  chEl.textContent = ch === null ? '' : (ch >= 0 ? '+' : '') + ch.toFixed(1) + '%';
+  $('dash-date').textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
+  renderHero();
+
+  const setText = (id, txt) => { const el = $(id); if (el) el.textContent = txt; };
   $('ov-invested').textContent = fmt0(t.val);
+  setText('ov-invested-sub', netWorth ? Math.round(t.val / netWorth * 100) + '% of net worth' : '');
   $('ov-cash').textContent = fmt0(t.cash);
+  setText('ov-cash-sub', netWorth ? Math.round(t.cash / netWorth * 100) + '% of net worth' : '');
   const gainEl = $('ov-gain');
   gainEl.textContent = fmtSigned(t.gain);
   gainEl.className = 'stat-value mono ' + (t.gain >= 0 ? 'pos' : 'neg');
+  setText('ov-gain-sub', `${t.gainPct >= 0 ? '+' : '−'}${Math.abs(t.gainPct).toFixed(1)}% on ${fmt0(t.inv)} deposited`);
   const saved = d.curIncome - d.curExpenses;
   const savedEl = $('dash-pl');
   savedEl.textContent = fmtSigned(saved);
   savedEl.className = 'stat-value mono ' + (saved >= 0 ? 'pos' : 'neg');
+  setText('dash-pl-sub', `${fmt0(d.curIncome)} in · ${fmt0(d.curExpenses)} out`);
 
-  // Where your money is — doughnut + account list
+  // Where your money is: allocation bar + account list
   const accts = [
-    ...state.brokers.map(b => ({ id: b.id, name: b.name, eur: toEUR(b.valoare_port, b.currency) })),
-    ...state.cash.map(c => ({ id: c.id, name: c.name, eur: toEUR(c.amount, c.currency) }))
+    ...state.brokers.map(b => ({ id: b.id, name: b.name, kind: 'Investments', ccy: b.currency, eur: toEUR(b.valoare_port, b.currency) })),
+    ...state.cash.map(c => ({ id: c.id, name: c.name, kind: 'Cash', ccy: c.currency, eur: toEUR(c.amount, c.currency) }))
   ].filter(a => a.eur > 0).sort((a, b) => b.eur - a.eur);
+  const acctTotal = accts.reduce((s, a) => s + a.eur, 0);
+  const acctColor = (i) => CHART_COLORS[i % CHART_COLORS.length];
 
-  $('accounts-list').innerHTML = accts.length ? accts.map(a => `
-    <div class="trend-row">
-      <div class="trend-left"><span class="cat-dot" style="background:${colorForCategory(a.id)}"></span><span class="trend-name">${escapeHtml(a.name)}</span></div>
-      <div class="trend-right"><div class="trend-amount">${fmt0(a.eur)}</div><div class="acct-share">${netWorth ? Math.round(a.eur / netWorth * 100) : 0}%</div></div>
-    </div>`).join('') : '<div class="empty-state">No accounts yet — add them under Investments.</div>';
+  setText('accounts-count', accts.length + (accts.length === 1 ? ' account' : ' accounts'));
+  $('alloc-bar').innerHTML = accts.map((a, i) =>
+    `<span class="alloc-seg" style="flex:${a.eur} 1 0;background:${acctColor(i)}"></span>`).join('');
+  $('alloc-bar').setAttribute('aria-label', accts.map(a => `${a.name} ${acctTotal ? (a.eur / acctTotal * 100).toFixed(1) : 0}%`).join(', '));
+  $('accounts-list').innerHTML = accts.length ? accts.map((a, i) => `
+    <div class="alloc-row">
+      <span class="alloc-dot" style="background:${acctColor(i)}"></span>
+      <div class="alloc-name"><div>${escapeHtml(a.name)}</div><div class="alloc-sub">${a.kind} · ${escapeHtml(a.ccy)}</div></div>
+      <div class="alloc-amount"><div>${fmt0(a.eur)}</div><div class="alloc-sub">${acctTotal ? (a.eur / acctTotal * 100).toFixed(1) : '0.0'}%</div></div>
+    </div>`).join('') : '<div class="empty-state">No accounts yet. Add them under Investments.</div>';
 
-  const wctx = $('chart-where');
-  if (wctx) {
-    if (charts.whereMoney) charts.whereMoney.destroy();
-    charts.whereMoney = new Chart(wctx, {
-      type: 'doughnut',
-      data: { labels: accts.map(a => a.name), datasets: [{ data: accts.map(a => a.eur), backgroundColor: accts.map(a => colorForCategory(a.id)), borderColor: getComputedStyle(document.documentElement).getPropertyValue('--surface').trim(), borderWidth: 2 }] },
-      options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { position: 'bottom', labels: { color: chartTextColor(), font: { size: 11 }, boxWidth: 10, padding: 10 } } } }
-    });
-  }
-
-  // "<Month> budget" — spend per category vs last month (no budget limits stored yet)
-  $('dash-budget-title').textContent = `${new Date(d.curYear, d.curMonth - 1).toLocaleString('en-US', { month: 'long' })} budget`;
+  // Spending this month vs last month (no budget limits stored yet)
+  $('dash-budget-title').textContent = `${new Date(d.curYear, d.curMonth - 1).toLocaleString('en-US', { month: 'long' })} spending`;
+  setText('dash-spend-total', fmt0(d.curExpenses));
   const trendList = $('trending-list');
   const sorted = d.categories
     .map(c => ({ id: c.id, name: c.name, cur: d.curByCat[c.id] || 0, prev: d.prevByCat[c.id] || 0 }))
     .filter(c => c.cur > 0 || c.prev > 0)
     .sort((a, b) => b.cur - a.cur)
     .slice(0, 6);
+  const maxCur = Math.max(...sorted.map(c => c.cur), 1);
   trendList.innerHTML = !sorted.length ? '<div class="empty-state">No spending logged yet this month.</div>' : sorted.map(c => {
     const delta = c.prev > 0 ? ((c.cur - c.prev) / c.prev * 100) : (c.cur > 0 ? 100 : 0);
     const dir = delta > 0.5 ? 'up' : (delta < -0.5 ? 'down' : '');
-    const arrow = delta > 0.5 ? '▲' : (delta < -0.5 ? '▼' : '—');
-    return `<div class="trend-row">
-      <div class="trend-left"><span class="cat-dot" style="background:${colorForCategory(c.id)}"></span><span class="trend-name">${escapeHtml(c.name)}</span></div>
-      <div class="trend-right"><div class="trend-amount">${fmt0(c.cur)}</div><div class="trend-delta ${dir}">${arrow} ${Math.abs(delta).toFixed(0)}%</div></div>
+    const txt = dir === '' ? '0%' : (delta > 0 ? '+' : '−') + Math.abs(delta).toFixed(0) + '%';
+    return `<div class="budget-row">
+      <div class="budget-name">${escapeHtml(c.name)}</div>
+      <div class="budget-bar"><span style="width:${(c.cur / maxCur * 100).toFixed(1)}%"></span></div>
+      <div class="budget-amount">${fmt0(c.cur)}</div>
+      <div class="budget-delta ${dir}">${txt}</div>
     </div>`;
   }).join('');
-
-  renderHeroSparkline();
 }
 
 function renderInvestmentsOverview() {
@@ -838,30 +873,150 @@ function timeAgo(iso) {
   return new Date(iso).toLocaleDateString();
 }
 
-function renderHeroSparkline() {
-  const ctx = document.getElementById('chart-hero-sparkline');
+// Net worth block on the Overview: value, change for the selected range, chart.
+function renderHero() {
+  const $ = (id) => document.getElementById(id);
+  if (!$('hero-net-worth')) return;
+  const t = portfolioTotals();
+  const netWorth = t.val + t.cash;
+  $('hero-net-worth').textContent = fmt0(netWorth);
+  $('hero-net-worth-ron').textContent = fmt(netWorth * state.rate) + ' RON at ' + Number(state.rate).toFixed(2);
+
+  const pts = netWorthRangePoints();
+  const ch = netWorthRangeChange(pts);
+  const chEl = $('hero-change');
+  if (ch) {
+    chEl.className = 'nw-delta ' + (ch.abs >= 0 ? 'pos' : 'neg');
+    chEl.textContent = fmtSigned(ch.abs) + (ch.pct === null ? '' : ` (${ch.pct >= 0 ? '+' : '−'}${Math.abs(ch.pct).toFixed(1)}%)`);
+    $('hero-range-label').textContent = RANGE_LABELS[state.heroRange];
+  } else {
+    chEl.className = 'nw-delta';
+    chEl.textContent = '';
+    $('hero-range-label').textContent = 'Not enough history for this range yet';
+  }
+
+  document.querySelectorAll('#nw-range-tabs .range-tab').forEach(b => {
+    const on = b.dataset.range === state.heroRange;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+
+  renderHeroChart(pts);
+}
+
+function renderHeroChart(pts) {
+  const ctx = document.getElementById('chart-networth-hero');
   if (!ctx) return;
-  const points = state.netWorth;
-  if (charts.heroSparkline) charts.heroSparkline.destroy();
-  if (!points.length) { charts.heroSparkline = null; return; }
+  if (charts.heroSparkline) { charts.heroSparkline.destroy(); charts.heroSparkline = null; }
+  if (!pts.length) return;
+
+  const css = getComputedStyle(document.documentElement);
+  const token = (name, fallback) => css.getPropertyValue(name).trim() || fallback;
+  const accent = token('--accent', '#7AA2F7');
+  const surface = token('--surface', '#151820');
+  const raised = token('--raised', '#1B1F27');
+  const line = token('--line', '#232833');
+  const lineStrong = token('--line-strong', '#4A5262');
+  const text = token('--text', '#E9ECF1');
+  const muted = chartTextColor();
+
+  const first = pts[0], last = pts[pts.length - 1];
+  const spanDays = (last.x - first.x) / 864e5;
+  const xMin = first.x === last.x ? first.x - 864e5 : first.x;
+  const xMax = first.x === last.x ? last.x + 864e5 : last.x;
+  const tickLabel = (v) => new Date(v).toLocaleDateString('en-GB',
+    spanDays > 270 ? { month: 'short', year: '2-digit' } : { day: 'numeric', month: 'short' });
+
   charts.heroSparkline = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: points.map(p => p.snapshot_date),
-      datasets: [{
-        data: points.map(p => Number(p.total_eur)),
-        borderColor: getComputedStyle(document.documentElement).getPropertyValue('--profit').trim() || '#34c778',
-        backgroundColor: 'transparent',
-        fill: false, tension: 0.3, pointRadius: 0, borderWidth: 2
-      }]
+      datasets: [
+        {
+          label: 'Net worth',
+          data: pts,
+          borderColor: accent,
+          borderWidth: 2.5,
+          tension: 0.2,
+          fill: true,
+          backgroundColor: (c) => {
+            const area = c.chart.chartArea;
+            if (!area) return 'transparent';
+            const g = c.chart.ctx.createLinearGradient(0, area.top, 0, area.bottom);
+            g.addColorStop(0, withAlpha(accent, 0.26));
+            g.addColorStop(1, withAlpha(accent, 0));
+            return g;
+          },
+          pointRadius: pts.map((_, i) => (i === pts.length - 1 ? 6 : 0)),
+          pointBackgroundColor: accent,
+          pointBorderColor: surface,
+          pointBorderWidth: 3,
+          pointHoverRadius: 6,
+          pointHoverBackgroundColor: accent,
+          pointHoverBorderColor: surface,
+          pointHoverBorderWidth: 3
+        },
+        {
+          label: 'Start of period',
+          data: [{ x: xMin, y: first.y }, { x: xMax, y: first.y }],
+          borderColor: lineStrong,
+          borderWidth: 1,
+          borderDash: [4, 5],
+          pointRadius: 0,
+          pointHoverRadius: 0,
+          fill: false
+        }
+      ]
     },
     options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: { enabled: false } },
-      scales: { x: { display: false }, y: { display: false } }
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'nearest', axis: 'x', intersect: false },
+      layout: { padding: { top: 8, right: 12 } },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          filter: (item) => item.datasetIndex === 0,
+          backgroundColor: raised,
+          borderColor: line,
+          borderWidth: 1,
+          titleColor: muted,
+          bodyColor: text,
+          titleFont: { size: 12, weight: '400' },
+          bodyFont: { size: 14, weight: '600' },
+          padding: 10,
+          displayColors: false,
+          callbacks: {
+            title: (items) => new Date(items[0].parsed.x).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+            label: (c) => fmt0(c.parsed.y)
+          }
+        }
+      },
+      scales: {
+        x: {
+          type: 'linear',
+          min: xMin,
+          max: xMax,
+          grid: { display: false },
+          border: { display: false },
+          ticks: { color: muted, font: { size: 11 }, maxTicksLimit: 6, maxRotation: 0, callback: tickLabel }
+        },
+        y: {
+          grace: '10%',
+          grid: { color: line },
+          border: { display: false },
+          ticks: { color: muted, font: { size: 11 }, maxTicksLimit: 6, callback: (v) => compactEUR(v) }
+        }
+      }
     }
   });
 }
+
+document.querySelectorAll('#nw-range-tabs .range-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    state.heroRange = btn.dataset.range;
+    renderHero();
+  });
+});
 
 function renderPension() {
   PENSIONS.forEach(renderPensionFor);
@@ -939,7 +1094,7 @@ function renderPensionChartFor(cfg) {
     data: {
       labels: points.map(p => p.transaction_date),
       datasets: [
-        { label: 'Net value (RON)', data: points.map(p => Number(p.valoare_neta)), borderColor: '#4c86ff', backgroundColor: 'rgba(76,134,255,0.08)', fill: true, tension: 0.3, pointRadius: 2 },
+        { label: 'Net value (RON)', data: points.map(p => Number(p.valoare_neta)), borderColor: '#7AA2F7', backgroundColor: 'rgba(122,162,247,0.08)', fill: true, tension: 0.3, pointRadius: 2 },
         { label: 'Personal assets (RON)', data: points.map(p => Number(p.activ_personal)), borderColor: '#34c778', backgroundColor: 'rgba(52,199,120,0.08)', fill: true, tension: 0.3, pointRadius: 2 }
       ]
     },
@@ -948,7 +1103,7 @@ function renderPensionChartFor(cfg) {
 }
 // ---------------- Charts ----------------
 
-const CHART_COLORS = ['#4c86ff', '#1fa15a', '#ff5c5c', '#f0a83c', '#9c6bf2', '#ec5fa3', '#2fb8c9', '#8a8f9c'];
+const CHART_COLORS = ['#7AA2F7', '#B392F0', '#E0B060', '#8A93A6', '#5FB3C9', '#E58BB0', '#8FCB8B', '#C9A27E'];
 
 function colorForCategory(catId) {
   let hash = 0;
@@ -998,12 +1153,12 @@ function renderNetWorthChart() {
       datasets: [{
         label: 'Net worth (EUR)',
         data: points.map(p => Number(p.total_eur)),
-        borderColor: '#4c86ff',
-        backgroundColor: 'rgba(76,134,255,0.10)',
+        borderColor: '#7AA2F7',
+        backgroundColor: 'rgba(122,162,247,0.10)',
         fill: true,
         tension: 0.3,
         pointRadius: points.length > 1 ? 2 : 4,
-        pointBackgroundColor: '#4c86ff'
+        pointBackgroundColor: '#7AA2F7'
       }]
     },
     options: chartBaseOptions()
@@ -1111,13 +1266,13 @@ function chartTextColor() {
   return getComputedStyle(document.documentElement).getPropertyValue('--muted').trim() || '#767c8c';
 }
 function chartGridColor() {
-  return document.documentElement.getAttribute('data-theme') === 'dark' ? 'rgba(255,255,255,0.06)' : '#e6e8ef';
+  return getComputedStyle(document.documentElement).getPropertyValue('--line').trim() || '#e6e8ef';
 }
 
 function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
   document.querySelectorAll('.theme-toggle-btn').forEach(btn => {
-    btn.textContent = theme === 'dark' ? '☀️ Light mode' : '🌙 Dark mode';
+    btn.textContent = theme === 'dark' ? 'Light mode' : 'Dark mode';
   });
 }
 
@@ -1134,7 +1289,7 @@ function toggleTheme() {
   applyTheme(next);
   renderCharts();
   renderPensionChart();
-  renderHeroSparkline();
+  renderHero();
   renderBrokerHistoryChart();
   renderDashboard();
   renderPlan();
