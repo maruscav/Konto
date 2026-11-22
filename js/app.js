@@ -802,7 +802,7 @@ function renderDashboard() {
   const gainEl = $('ov-gain');
   gainEl.textContent = fmtSigned(t.gain);
   gainEl.className = 'stat-value mono ' + (t.gain >= 0 ? 'pos' : 'neg');
-  setText('ov-gain-sub', `${t.gainPct >= 0 ? '+' : '−'}${Math.abs(t.gainPct).toFixed(1)}% on ${fmt0(t.inv)} deposited`);
+  $('ov-gain-sub').innerHTML = `${t.gainPct >= 0 ? '+' : '−'}${Math.abs(t.gainPct).toFixed(1)}% on <span class="amt">${fmt0(t.inv)}</span> deposited`;
   const saved = d.curIncome - d.curExpenses;
   const savedEl = $('dash-pl');
   savedEl.textContent = fmtSigned(saved);
@@ -856,8 +856,8 @@ function renderInvestmentsOverview() {
   if (!el) return;
   const t = portfolioTotals();
   el.textContent = fmt0(t.val);
-  document.getElementById('inv-sub').textContent =
-    `${fmtSigned(t.gain)} · ${t.gainPct.toFixed(1)}% on ${fmt0(t.inv)} deposited`;
+  document.getElementById('inv-sub').innerHTML =
+    `<span class="amt">${fmtSigned(t.gain)}</span> · ${t.gainPct.toFixed(1)}% on <span class="amt">${fmt0(t.inv)}</span> deposited`;
 }
 
 
@@ -887,7 +887,7 @@ function renderHero() {
   const chEl = $('hero-change');
   if (ch) {
     chEl.className = 'nw-delta ' + (ch.abs >= 0 ? 'pos' : 'neg');
-    chEl.textContent = fmtSigned(ch.abs) + (ch.pct === null ? '' : ` (${ch.pct >= 0 ? '+' : '−'}${Math.abs(ch.pct).toFixed(1)}%)`);
+    chEl.innerHTML = `<span class="amt">${fmtSigned(ch.abs)}</span>` + (ch.pct === null ? '' : ` (${ch.pct >= 0 ? '+' : '−'}${Math.abs(ch.pct).toFixed(1)}%)`);
     $('hero-range-label').textContent = RANGE_LABELS[state.heroRange];
   } else {
     chEl.className = 'nw-delta';
@@ -975,6 +975,7 @@ function renderHeroChart(pts) {
       plugins: {
         legend: { display: false },
         tooltip: {
+          enabled: !isPrivate(),
           filter: (item) => item.datasetIndex === 0,
           backgroundColor: raised,
           borderColor: line,
@@ -1004,7 +1005,7 @@ function renderHeroChart(pts) {
           grace: '10%',
           grid: { color: line },
           border: { display: false },
-          ticks: { color: muted, font: { size: 11 }, maxTicksLimit: 6, callback: (v) => compactEUR(v) }
+          ticks: { color: muted, font: { size: 11 }, maxTicksLimit: 6, callback: (v) => (isPrivate() ? '' : compactEUR(v)) }
         }
       }
     }
@@ -1176,7 +1177,7 @@ function renderCategoryBreakdownChart() {
   charts.categoryBreakdown = new Chart(ctx, {
     type: 'doughnut',
     data: { labels: rows.map(r => r.c.name), datasets: [{ data: rows.map(r => r.v), backgroundColor: rows.map(r => colorForCategory(r.c.id)), borderColor: getComputedStyle(document.documentElement).getPropertyValue('--surface').trim() || '#12161f', borderWidth: 2 }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: chartTextColor(), font: { size: 11 }, boxWidth: 10, padding: 10 } } } }
+    options: { responsive: true, maintainAspectRatio: false, plugins: { tooltip: { enabled: !isPrivate() }, legend: { position: 'bottom', labels: { color: chartTextColor(), font: { size: 11 }, boxWidth: 10, padding: 10 } } } }
   });
 }
 
@@ -1249,15 +1250,29 @@ function renderBrokerHistoryChart() {
 function chartBaseOptions() {
   const textColor = chartTextColor();
   const gridColor = chartGridColor();
+  const hide = isPrivate();
   return {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend: { labels: { color: textColor, font: { size: 11 }, boxWidth: 10 } } },
+    plugins: {
+      legend: { labels: { color: textColor, font: { size: 11 }, boxWidth: 10 } },
+      tooltip: { enabled: !hide }
+    },
     scales: {
       x: { ticks: { color: textColor, font: { size: 10 } }, grid: { color: gridColor } },
-      y: { ticks: { color: textColor, font: { size: 10 } }, grid: { color: gridColor } }
+      // privacy mode: keep the shape of the chart, drop the amounts on the axis
+      y: { ticks: { color: textColor, font: { size: 10 }, callback: hide ? () => '' : undefined }, grid: { color: gridColor } }
     }
   };
+}
+
+// Called by ui.js when privacy mode is switched on or off.
+function refreshChartsForPrivacy() {
+  renderCharts();
+  renderPensionChart();
+  renderHero();
+  renderBrokerHistoryChart();
+  renderPlan();
 }
 
 // ---------------- Theme ----------------
