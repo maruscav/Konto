@@ -349,9 +349,10 @@ function renderPlanChart(ex, startTotal) {
   const opts = chartBaseOptions();
   opts.scales.x.ticks.maxTicksLimit = 8;
   opts.scales.x.ticks.maxRotation = 0;
-  opts.scales.y.ticks.callback = (v) => '€ ' + Math.round(v).toLocaleString('en-US');
+  opts.scales.y.ticks.callback = (v) => (isPrivate() ? '' : '€ ' + Math.round(v).toLocaleString('en-US'));
   opts.interaction = { mode: 'index', intersect: false };
   opts.plugins.tooltip = {
+    enabled: !isPrivate(),
     callbacks: { label: (c) => (c.parsed.y === null ? '' : `${c.dataset.label}: ${fmt0(c.parsed.y)}`) }
   };
 
