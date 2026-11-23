@@ -4,12 +4,22 @@
 // app.js) when the mode changes.
 
 const PRIVACY_IDLE_MS = 60 * 1000;
+const PRIVACY_PREF_KEY = 'konto-privacy-enabled';
 const rootEl = document.documentElement;
 
 // ---------------- Privacy mode ----------------
 // index.html ships with class="private" on <html>, so every load starts hidden.
-// Nothing is stored: the numbers are hidden again after a lock, after 60 seconds
-// without activity, and when the tab or app goes to the background.
+// Nothing about the hidden/shown state is stored: the numbers are hidden again
+// after a lock, after 60 seconds without activity, and when the tab or app goes
+// to the background.
+//
+// The only stored value is the device preference from Settings
+// ("Enable privacy mode"). Default is on; only an explicit "0" turns it off.
+// When it is off, setPrivate() never blurs anything and the eye buttons are hidden.
+
+function privacyEnabled() {
+  try { return localStorage.getItem(PRIVACY_PREF_KEY) !== '0'; } catch (e) { return true; }
+}
 
 function isPrivate() { return rootEl.classList.contains('private'); }
 
@@ -17,10 +27,11 @@ let privacyIdleTimer = null;
 
 function armPrivacyIdle() {
   clearTimeout(privacyIdleTimer);
-  if (!isPrivate()) privacyIdleTimer = setTimeout(() => setPrivate(true), PRIVACY_IDLE_MS);
+  if (privacyEnabled() && !isPrivate()) privacyIdleTimer = setTimeout(() => setPrivate(true), PRIVACY_IDLE_MS);
 }
 
 function setPrivate(on) {
+  if (!privacyEnabled()) on = false;   // feature disabled: never blur
   const changed = isPrivate() !== on;
   rootEl.classList.toggle('private', on);
   document.querySelectorAll('.privacy-toggle-btn').forEach((btn) => {
@@ -34,6 +45,12 @@ function setPrivate(on) {
   if (changed && typeof refreshChartsForPrivacy === 'function') refreshChartsForPrivacy();
 }
 
+function setPrivacyEnabled(enabled) {
+  try { localStorage.setItem(PRIVACY_PREF_KEY, enabled ? '1' : '0'); } catch (e) {}
+  rootEl.classList.toggle('privacy-off', !enabled);
+  setPrivate(enabled);   // turning on hides right away, turning off reveals
+}
+
 document.querySelectorAll('.privacy-toggle-btn').forEach((btn) => {
   btn.addEventListener('click', () => setPrivate(!isPrivate()));
 });
@@ -45,6 +62,14 @@ document.querySelectorAll('.privacy-toggle-btn').forEach((btn) => {
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) setPrivate(true);
 });
+
+// Settings switch
+const privacySwitch = document.getElementById('privacy-enabled-toggle');
+if (privacySwitch) {
+  privacySwitch.checked = privacyEnabled();
+  privacySwitch.addEventListener('change', () => setPrivacyEnabled(privacySwitch.checked));
+}
+rootEl.classList.toggle('privacy-off', !privacyEnabled());
 
 setPrivate(true);
 
