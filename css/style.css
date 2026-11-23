@@ -891,3 +891,14 @@ table.ledger.wide-plan th:nth-child(2) { text-align: center; width: 56px; }
   #plan-card .quick-add-row input[type="date"],
   #plan-card .quick-add-row input[type="number"] { width: 100%; }
 }
+
+/* Privacy mode disabled in Settings: hide the eye buttons */
+html.privacy-off .privacy-toggle-btn { display: none; }
+
+.switch-row {
+  display: flex; align-items: center; gap: 10px;
+  min-height: 44px; font-size: 14px; cursor: pointer;
+}
+.switch-row input[type="checkbox"] {
+  width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer;
+}
