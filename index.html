@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Konto — Finance Tracker</title>
 <link rel="stylesheet" href="css/style.css?v=3">
+<script>
+  try { if (localStorage.getItem('konto-privacy-enabled') === '0') document.documentElement.classList.remove('private'); } catch (e) {}
+</script>
 </head>
 <body>
 
@@ -397,6 +400,18 @@
         <div id="webauthn-device-list"></div>
         <button class="add-row-btn" id="register-biometric-btn">+ Enroll this device</button>
         <p class="auth-msg" id="biometric-msg" style="margin-top:8px;"></p>
+      </div>
+
+      <div class="card" style="max-width:420px;">
+        <p class="card-title">Privacy mode</p>
+        <p style="color:var(--muted); font-size:12.5px; margin-top:-8px;">
+          Blurs all amounts when the app opens, locks, goes to the background, or sits idle for a minute.
+          Turn it off to always show numbers on this device.
+        </p>
+        <label class="switch-row">
+          <input type="checkbox" id="privacy-enabled-toggle" checked/>
+          <span>Enable privacy mode</span>
+        </label>
       </div>
 
       <div class="card" style="max-width:420px;">
